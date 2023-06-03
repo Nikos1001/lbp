@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "*.s": "kickassembler",
+        "ios": "cpp",
+        "random": "cpp"
+    }
+}

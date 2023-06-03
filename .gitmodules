@@ -1,0 +1,12 @@
+[submodule "lib/glfw"]
+	path = lib/glfw
+	url = https://github.com/glfw/glfw
+[submodule "lib/glew"]
+	path = lib/glew
+	url = https://github.com/omniavinco/glew-cmake
+[submodule "lib/glm"]
+	path = lib/glm
+	url = https://github.com/g-truc/glm.git
+[submodule "lib/box2d"]
+	path = lib/box2d
+	url = https://github.com/tobanteGaming/Box2D-cmake.git
