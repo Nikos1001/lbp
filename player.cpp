@@ -52,6 +52,7 @@ void Player::free() {
 void Player::render() {
 
     rnd.meshShader.use();
+
     glm::mat4 transform = glm::mat4(1.0f); 
     transform = glm::translate(transform, glm::vec3(head->GetPosition().x, head->GetPosition().y, -layer - 0.5f));
     transform = glm::scale(transform, glm::vec3(2 * BOX_RADIUS, 2 * BOX_RADIUS, 1.0f));
@@ -91,14 +92,18 @@ void Player::update(float dt) {
     for(b2ContactEdge* ce = legs->GetContactList(); ce; ce = ce->next) {
         b2Contact* c = ce->contact;
         if(c->IsTouching()) {
-            grounded |= c->GetManifold()->localNormal.y > 0.95;
+            b2WorldManifold manifold;
+            c->GetWorldManifold(&manifold);
+            float dy = legs->GetWorldCenter().y - manifold.points[0].y;
+            grounded |= dy < 0.2 && dy > 0.13;
         }
     }
 
     if(grounded) {
-        if(keyDown(' ')) {
-            head->ApplyForceToCenter(b2Vec2(0.0f, 10.0f), true);
-            legs->ApplyForceToCenter(b2Vec2(0.0f, 10.0f), true);
+        if(keyPressed(' ')) {
+            head->ApplyForceToCenter(b2Vec2(0.0f, 50.0f), true);
+            legs->ApplyForceToCenter(b2Vec2(0.0f, 50.0f), true);
+            audio.play("jump");
         }
     }
 

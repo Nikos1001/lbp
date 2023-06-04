@@ -23,6 +23,8 @@ public:
     int frontLayer;
     int backLayer;
 
+    int material;
+
 private:
 
     Mesh mesh;

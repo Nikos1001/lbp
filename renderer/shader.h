@@ -2,7 +2,7 @@
 #ifndef SHADER_H
 #define SHADER_H
 
-#include <glm/glm.hpp>
+#include "../util.h"
 
 class Shader {
 

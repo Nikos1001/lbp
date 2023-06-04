@@ -2,11 +2,11 @@
 project(lbp)
 
 add_executable(lbp 
-    main.cpp mem.cpp input.cpp 
+    main.cpp mem.cpp input.cpp
     renderer/renderer.cpp renderer/mesh.cpp renderer/shader.cpp renderer/texture.cpp
     polygon/polygon.cpp polygon/geoutil.cpp
     audio/audio.cpp
-    block.cpp player.cpp)
+    level.cpp block.cpp material.cpp player.cpp)
 
 add_subdirectory(lib/glfw)
 target_link_libraries(lbp glfw)

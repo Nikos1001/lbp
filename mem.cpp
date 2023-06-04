@@ -13,8 +13,8 @@ void* heapRealloc(void* alloc, size_t newSize) {
     return realloc(alloc, newSize);
 }
 
-// a *terrabyte* ought to be enough :)
-static char arena[(size_t)1024 * 1024 * 1024 * 1024];
+// a *gigabyte* ought to be enough :)
+static char arena[(size_t)1024 * 1024 * 1024];
 static char* arenaCurr;
 
 void arenaInit() {

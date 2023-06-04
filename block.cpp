@@ -1,6 +1,7 @@
 
 #include "block.h"
 #include "main.h"
+#include "material.h"
 
 void Block::init(glm::vec2 pos) {
     mesh.init();
@@ -8,6 +9,7 @@ void Block::init(glm::vec2 pos) {
 
     b2BodyDef bodyDef;
     bodyDef.type = b2_staticBody;
+    bodyDef.bullet = true;
     bodyDef.position.Set(pos.x, pos.y);
     body = phys->CreateBody(&bodyDef);
 }
@@ -24,6 +26,12 @@ void Block::render() {
     transform = glm::translate(transform, glm::vec3(body->GetPosition().x, body->GetPosition().y, 0.0f));
     transform = glm::rotate(transform, body->GetAngle(), glm::vec3(0.0f, 0.0f, 1.0f));
     rnd.meshShader.setMat4Uniform("uModel", transform);
+    rnd.meshShader.setIntUniform("uCol", 0);
+    materials[material].col.use(0); 
+    rnd.meshShader.setIntUniform("uNorm", 1);
+    materials[material].norm.use(1); 
+    rnd.meshShader.setIntUniform("uArm", 2);
+    materials[material].arm.use(2); 
     mesh.render();
 }
 
@@ -39,7 +47,7 @@ static void generateBlockMesh(Polygon<true>& poly, Mesh& mesh, int frontLayer, i
     Arr<MeshVert, false> verts;
     verts.init();
     for(int i = 0; i < poly.verts.cnt(); i++) {
-        verts.add((MeshVert){glm::vec3(poly.verts[i].pt, -frontLayer), poly.verts[i].pt, glm::vec3(0.0f, 0.0f, 1.0f)});
+        verts.add((MeshVert){glm::vec3(poly.verts[i].pt, -frontLayer), poly.verts[i].pt, glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(1.0f, 0.0f, 0.0f)});
     }
     for(int i = 0; i < poly.chains.cnt(); i++) {
         int i0 = poly.chains[i];
@@ -52,12 +60,13 @@ static void generateBlockMesh(Polygon<true>& poly, Mesh& mesh, int frontLayer, i
 
             float newPerim = perim + glm::distance(p0, p1);
 
-            glm::vec3 norm = glm::normalize(glm::cross(glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(p1 - p0, 0.0f)));
+            glm::vec3 tang = glm::normalize(glm::vec3(p1 - p0, 0.0f)); 
+            glm::vec3 norm = glm::normalize(glm::cross(glm::vec3(0.0f, 0.0f, 1.0f), tang));
 
-            int v0 = verts.add((MeshVert){glm::vec3(p0, -(float)frontLayer), glm::vec2(perim, 0.0f), norm});
-            int v1 = verts.add((MeshVert){glm::vec3(p1, -(float)frontLayer), glm::vec2(newPerim, 0.0f), norm});
-            int v2 = verts.add((MeshVert){glm::vec3(p0, -(float)backLayer - 1.0f), glm::vec2(perim, backLayer - frontLayer + 1), norm});
-            int v3 = verts.add((MeshVert){glm::vec3(p1, -(float)backLayer - 1.0f), glm::vec2(newPerim, backLayer - frontLayer + 1), norm});
+            int v0 = verts.add((MeshVert){glm::vec3(p0, -(float)frontLayer), glm::vec2(perim, 0.0f), norm, tang});
+            int v1 = verts.add((MeshVert){glm::vec3(p1, -(float)frontLayer), glm::vec2(newPerim, 0.0f), norm, tang});
+            int v2 = verts.add((MeshVert){glm::vec3(p0, -(float)backLayer - 1.0f), glm::vec2(perim, backLayer - frontLayer + 1), norm, tang});
+            int v3 = verts.add((MeshVert){glm::vec3(p1, -(float)backLayer - 1.0f), glm::vec2(newPerim, backLayer - frontLayer + 1), norm, tang});
 
             tris.add(v0);
             tris.add(v1);
@@ -100,7 +109,7 @@ void Block::updateMesh() {
 
         b2FixtureDef fixtureDef;
         fixtureDef.shape = &shape;
-        fixtureDef.density = 500.0f;
+        fixtureDef.density = materials[material].density; 
         fixtureDef.friction = 0.3f;
 
         uint32_t mask = 0;

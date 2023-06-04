@@ -25,11 +25,12 @@ void Texture::loadFromFile(const char* path) {
         printf("Texture %s ded :(\n", path);
         exit(-1);
     }
-    stbi_image_free(data);
 
     glBindTexture(GL_TEXTURE_2D, tex);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
     glGenerateMipmap(GL_TEXTURE_2D);
+
+    stbi_image_free(data);
 }
 
 void Texture::use(int slot) {
