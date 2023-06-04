@@ -2,13 +2,21 @@
 #include "mesh.h"
 #include <GL/glew.h>
 
+static void configAttribs() {
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(5 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+}
+
 void Mesh::init() {
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
     
     glGenBuffers(1, &vert);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
+    configAttribs();
 
     glGenBuffers(1, &ebo);
 
@@ -20,14 +28,13 @@ void Mesh::free() {
     glDeleteBuffers(1, &ebo);
 }
 
-void Mesh::upload(int nVerts, float* verts, int nTris, unsigned int* idxs) {
+void Mesh::upload(int nVerts, MeshVert* verts, int nTris, unsigned int* idxs) {
     this->nTris = nTris;
     glBindVertexArray(vao);
 
     glBindBuffer(GL_ARRAY_BUFFER, vert);
-    glBufferData(GL_ARRAY_BUFFER, nVerts * 3 * sizeof(float), verts, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
+    glBufferData(GL_ARRAY_BUFFER, nVerts * sizeof(MeshVert), verts, GL_STATIC_DRAW);
+    configAttribs();
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * nTris * 3, idxs, GL_STATIC_DRAW);

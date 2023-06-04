@@ -52,21 +52,24 @@ void Player::free() {
 void Player::render() {
 
     rnd.meshShader.use();
-    glm::mat4 transform = rnd.projView; 
-    transform = glm::translate(transform, glm::vec3(head->GetPosition().x, head->GetPosition().y, -0.5f));
+    glm::mat4 transform = glm::mat4(1.0f); 
+    transform = glm::translate(transform, glm::vec3(head->GetPosition().x, head->GetPosition().y, -layer - 0.5f));
     transform = glm::scale(transform, glm::vec3(2 * BOX_RADIUS, 2 * BOX_RADIUS, 1.0f));
-    rnd.meshShader.setMat4Uniform("uTrans", transform);
+    rnd.meshShader.setMat4Uniform("uModel", transform);
     rnd.quad.render();
 
-    transform = rnd.projView; 
-    transform = glm::translate(transform, glm::vec3(legs->GetPosition().x, legs->GetPosition().y, -0.5f));
+    transform = glm::mat4(1.0f); 
+    transform = glm::translate(transform, glm::vec3(legs->GetPosition().x, legs->GetPosition().y, -layer - 0.5f));
     transform = glm::scale(transform, glm::vec3(2 * BOX_RADIUS, 2 * BOX_RADIUS, 1.0f));
-    rnd.meshShader.setMat4Uniform("uTrans", transform);
+    rnd.meshShader.setMat4Uniform("uModel", transform);
     rnd.quad.render();
 
 }
 
 void Player::update(float dt) {
+
+    rnd.camPos.x = head->GetPosition().x;
+    rnd.camPos.y = head->GetPosition().y;
 
     float horizInput = 0.0f;
     if(keyDown('A'))
@@ -94,6 +97,22 @@ void Player::update(float dt) {
             head->ApplyForceToCenter(b2Vec2(0.0f, 10.0f), true);
             legs->ApplyForceToCenter(b2Vec2(0.0f, 10.0f), true);
         }
+    }
+
+    if(keyPressed('W'))
+        layer++;
+    if(keyPressed('S'))
+        layer--;
+
+    uint32_t colMask = 1 << layer;
+    b2Filter filter;
+    filter.categoryBits = colMask;
+    filter.maskBits = colMask;
+    for(b2Fixture* f = head->GetFixtureList(); f; f = f->GetNext()) {
+        f->SetFilterData(filter);
+    }
+    for(b2Fixture* f = legs->GetFixtureList(); f; f = f->GetNext()) {
+        f->SetFilterData(filter);
     }
 
 }

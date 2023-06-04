@@ -20,10 +20,10 @@ void Block::free() {
 
 void Block::render() {
     rnd.meshShader.use();
-    glm::mat4 transform = rnd.projView; 
+    glm::mat4 transform = glm::mat4(1.0f); 
     transform = glm::translate(transform, glm::vec3(body->GetPosition().x, body->GetPosition().y, 0.0f));
     transform = glm::rotate(transform, body->GetAngle(), glm::vec3(0.0f, 0.0f, 1.0f));
-    rnd.meshShader.setMat4Uniform("uTrans", transform);
+    rnd.meshShader.setMat4Uniform("uModel", transform);
     mesh.render();
 }
 
@@ -31,31 +31,33 @@ void Block::setDynamic(bool dynamic) {
     body->SetType(dynamic ? b2_dynamicBody : b2_staticBody);
 }
 
-static void generateBlockMesh(Polygon<true>& poly, Mesh& mesh) {
+static void generateBlockMesh(Polygon<true>& poly, Mesh& mesh, int frontLayer, int backLayer) {
     Arr<int, false> tris;
     tris.init();
     triangulate(poly, tris);
 
-    Arr<float, false> verts;
+    Arr<MeshVert, false> verts;
     verts.init();
     for(int i = 0; i < poly.verts.cnt(); i++) {
-        verts.add(poly.verts[i].pt.x);
-        verts.add(poly.verts[i].pt.y);
-        verts.add(0.0f);
-    }
-    for(int i = 0; i < poly.verts.cnt(); i++) {
-        verts.add(poly.verts[i].pt.x);
-        verts.add(poly.verts[i].pt.y);
-        verts.add(-1.0f);
+        verts.add((MeshVert){glm::vec3(poly.verts[i].pt, -frontLayer), poly.verts[i].pt, glm::vec3(0.0f, 0.0f, 1.0f)});
     }
     for(int i = 0; i < poly.chains.cnt(); i++) {
         int i0 = poly.chains[i];
+        float perim = 0.0f;
         do {
             int i1 = poly.verts[i0].next;
-            int v0 = i0;
-            int v1 = i1;
-            int v2 = i0 + poly.verts.cnt();
-            int v3 = i1 + poly.verts.cnt();
+
+            glm::vec2 p0 = poly.verts[i0].pt;
+            glm::vec2 p1 = poly.verts[i1].pt;
+
+            float newPerim = perim + glm::distance(p0, p1);
+
+            glm::vec3 norm = glm::normalize(glm::cross(glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(p1 - p0, 0.0f)));
+
+            int v0 = verts.add((MeshVert){glm::vec3(p0, -(float)frontLayer), glm::vec2(perim, 0.0f), norm});
+            int v1 = verts.add((MeshVert){glm::vec3(p1, -(float)frontLayer), glm::vec2(newPerim, 0.0f), norm});
+            int v2 = verts.add((MeshVert){glm::vec3(p0, -(float)backLayer - 1.0f), glm::vec2(perim, backLayer - frontLayer + 1), norm});
+            int v3 = verts.add((MeshVert){glm::vec3(p1, -(float)backLayer - 1.0f), glm::vec2(newPerim, backLayer - frontLayer + 1), norm});
 
             tris.add(v0);
             tris.add(v1);
@@ -65,15 +67,16 @@ static void generateBlockMesh(Polygon<true>& poly, Mesh& mesh) {
             tris.add(v2);
 
             i0 = i1; 
+            perim = newPerim;
         } while(i0 != poly.chains[i]); 
     }
 
-    mesh.upload(poly.verts.cnt() * 2, verts.elems, tris.cnt() / 3, (unsigned int*)tris.elems);
+    mesh.upload(verts.cnt(), verts.elems, tris.cnt() / 3, (unsigned int*)tris.elems);
 }
 
 void Block::updateMesh() {
 
-    generateBlockMesh(poly, mesh);
+    generateBlockMesh(poly, mesh, frontLayer, backLayer);
 
     Arr<int, false> tris;
     tris.init();
@@ -99,6 +102,13 @@ void Block::updateMesh() {
         fixtureDef.shape = &shape;
         fixtureDef.density = 0.5f;
         fixtureDef.friction = 0.3f;
+
+        uint32_t mask = 0;
+        for(int i = frontLayer; i <= backLayer; i++)
+            mask |= 1 << i;
+            
+        fixtureDef.filter.categoryBits = mask;
+        fixtureDef.filter.maskBits = mask;
 
         // TODO: destroy fixtures when editing mesh
         body->CreateFixture(&fixtureDef);

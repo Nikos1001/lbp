@@ -10,6 +10,7 @@ public:
     void init(const char* vert, const char* frag);
     void use();
 
+    void setIntUniform(const char* name, int val);
     void setMat4Uniform(const char* name, glm::mat4& val);
 
 private:

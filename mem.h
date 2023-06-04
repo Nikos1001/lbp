@@ -30,12 +30,13 @@ public:
         }
     }
 
-    void add(T elem) {
+    int add(T elem) {
         size++;
         if(size > cap) {
             grow();
         }
         this->elems[size - 1] = elem;
+        return size - 1;
     }
 
     void pop() {

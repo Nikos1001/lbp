@@ -13,6 +13,8 @@ public:
     void render();
     void update(float dt);
 
+    int layer;
+
 private:
     
     b2Body* head;

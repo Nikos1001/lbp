@@ -20,6 +20,9 @@ public:
 
     Polygon<true> poly;
 
+    int frontLayer;
+    int backLayer;
+
 private:
 
     Mesh mesh;
