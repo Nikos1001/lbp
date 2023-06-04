@@ -6,8 +6,10 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#define str(...) #__VA_ARGS__
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include "lib/json/single_include/nlohmann/json.hpp"
+
+#define str(...) #__VA_ARGS__
 
 #endif

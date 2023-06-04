@@ -82,6 +82,9 @@ void Player::update(float dt) {
 
     if(head->GetPosition().y - legs->GetPosition().y < 0.35) {
         printf("Player crushed!\n");
+        audio.play("squish");
+        kill();
+        return;
     }
 
     bool grounded = false;
@@ -115,4 +118,8 @@ void Player::update(float dt) {
         f->SetFilterData(filter);
     }
 
+}
+
+void Player::kill() {
+    players.kill(this);
 }

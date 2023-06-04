@@ -16,6 +16,8 @@ public:
     int layer;
 
 private:
+
+    void kill();
     
     b2Body* head;
     b2Body* legs;

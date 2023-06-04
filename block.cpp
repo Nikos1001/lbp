@@ -100,7 +100,7 @@ void Block::updateMesh() {
 
         b2FixtureDef fixtureDef;
         fixtureDef.shape = &shape;
-        fixtureDef.density = 0.5f;
+        fixtureDef.density = 500.0f;
         fixtureDef.friction = 0.3f;
 
         uint32_t mask = 0;
