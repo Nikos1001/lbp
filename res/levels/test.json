@@ -15,8 +15,8 @@
             ]
         },
         {
-            "front": 2,
-            "back": 2,
+            "front": 0,
+            "back": 0,
             "dynamic": true,
             "material": "green-fabric",
             "chains": [
@@ -95,6 +95,46 @@
                     10, 7.1,
                     10, 2.1,
                     9, 2.1
+                ]
+            ]
+        },
+        {
+            "front": 1,
+            "back": 1,
+            "dynamic": false,
+            "material": "factory-metal",
+            "chains": [
+                [
+                    10, 0,
+                    15, 5,
+                    20, 5,
+                    20, 0
+                ],
+                [
+                    15, 2,
+                    19, 2,
+                    19, 4,
+                    15, 4
+                ],
+                [
+                    13, 1,
+                    13, 2,
+                    12, 1.9,
+                    12, 1
+                ]
+            ]
+        },
+        {
+            "front": 2,
+            "back": 2,
+            "dynamic": true,
+            "material": "factory-metal",
+            "chains": [
+                [
+                    -100, 100,
+                    -100, 200,
+                    100, 200,
+                    100, 100
                 ]
             ]
         }

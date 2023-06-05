@@ -100,6 +100,10 @@ void Block::updateMesh() {
         glm::vec2 p1 = poly.verts[i1].pt;
         glm::vec2 p2 = poly.verts[i2].pt;
 
+        float area = triArea(p0, p1, p2);
+        if(area < 0.0001f)
+            continue;
+
         b2PolygonShape shape;
         b2Vec2 points[3];
         points[0].Set(p0.x, p0.y);
@@ -120,7 +124,8 @@ void Block::updateMesh() {
         fixtureDef.filter.maskBits = mask;
 
         // TODO: destroy fixtures when editing mesh
-        body->CreateFixture(&fixtureDef);
+        if(area > 0.0001f)
+            body->CreateFixture(&fixtureDef);
     }
 
 

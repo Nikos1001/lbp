@@ -3,6 +3,15 @@
 #define PLAYER_H
 
 #include "box2d.h"
+#include "input.h"
+#include "util.h"
+
+struct PlayerLimb {
+    b2Body* body;
+    b2Fixture* solid;
+    b2Fixture* backSensor;
+    b2Fixture* frontSensor;
+};
 
 class Player {
 
@@ -12,6 +21,7 @@ public:
     void free();
     void render();
     void update(float dt);
+    void applyForce(glm::vec2 force);
 
     int layer;
 
@@ -19,8 +29,11 @@ private:
 
     void kill();
     
-    b2Body* head;
-    b2Body* legs;
+    PlayerLimb head;
+    PlayerLimb legs;
+
+    ActionBuffer jumpBuffer;
+    bool rising;
 
 };
 

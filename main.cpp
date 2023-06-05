@@ -28,7 +28,6 @@ int main() {
     players.init();
 
     loadMaterials();
-    loadLevel("test");
 
     Texture tex; 
     tex.init();
@@ -37,6 +36,8 @@ int main() {
     Player* player = players.spawn();
     player->layer = 1;
     player->init(-10.0f, 1.0f);
+
+    loadLevel("test");
 
     double prevTime = glfwGetTime(); 
     while(!glfwWindowShouldClose(rnd.window)) {

@@ -15,4 +15,6 @@ extern Audio audio;
 extern ObjList<Block> blocks; 
 extern ObjList<Player> players;
 
+#define MAX_LAYER 2
+
 #endif

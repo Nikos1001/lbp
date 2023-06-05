@@ -23,3 +23,6 @@ target_link_libraries(lbp Box2D-cmake)
 if(LINUX)
     target_link_libraries(lbp pthread m dl)
 endif()
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -fsanitize=undefined -fsanitize=address")
+target_link_options(lbp BEFORE PUBLIC -fsanitize=undefined PUBLIC -fsanitize=address)
