@@ -60,7 +60,7 @@ private:
 
     // silly way to allocate things. relies on os only allocating globals that are used
     // but this guarantees that things don't move around in memory, which is pretty cool
-    ObjListNode<T> objs[1024 * 1024];
+    ObjListNode<T> objs[1024];
     ObjListNode<T>* free;
     int cnt;
 

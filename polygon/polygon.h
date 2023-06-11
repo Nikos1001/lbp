@@ -271,4 +271,50 @@ void triangulate(Polygon<polyOnHeap>& poly, Arr<int, triArrOnHeap>& tris) {
 
 }
 
+template<bool onHeap>
+void inset(Polygon<onHeap>& poly, float inset) {
+    glm::vec2 bisectors[poly.verts.cnt()];
+    for(int i = 0; i < poly.verts.cnt(); i++) {
+        glm::vec2 p0 = poly.verts[poly.verts[i].prev].pt;
+        glm::vec2 p1 = poly.verts[i].pt;
+        glm::vec2 p2 = poly.verts[poly.verts[i].next].pt;
+
+        glm::vec2 p1p0 = glm::normalize(p0 - p1);
+        glm::vec2 p1p2 = glm::normalize(p2 - p1);
+
+        glm::vec2 bisector = glm::normalize(p1p0 + p1p2);
+
+        float angleBetween = glm::acos(glm::dot(p1p0, p1p2)); 
+        bisector *= 1 / sin(angleBetween / 2);
+
+        glm::vec3 prod = glm::cross(glm::vec3(p1p0, 0.0f), glm::vec3(p1p2, 0.0f));
+        if(prod.z < 0)
+            bisector *= -1; 
+        bisectors[i] = bisector;
+    }
+
+    float vertInset[poly.verts.cnt()];
+    for(int i = 0; i < poly.verts.cnt(); i++)
+        vertInset[i] = inset; 
+    for(int i = 0; i < poly.verts.cnt(); i++) {
+        int i1 = i;
+        int i2 = poly.verts[i1].next;
+        glm::vec2 p1 = poly.verts[i1].pt;
+        glm::vec2 p2 = poly.verts[i2].pt;
+        glm::vec2 p1p2 = glm::normalize(p2 - p1);
+        float edgeLen = glm::distance(p1, p2);
+        float edgeShrinkSpeed = glm::dot(bisectors[i1], p1p2) + glm::dot(bisectors[i2], -p1p2); 
+        float edgeDisappearTime = edgeLen / edgeShrinkSpeed; 
+        edgeLen -= edgeShrinkSpeed * inset;
+        if(edgeDisappearTime >= 0) {
+            vertInset[i1] = std::min(vertInset[i1], edgeDisappearTime);
+            vertInset[i2] = std::min(vertInset[i2], edgeDisappearTime);
+        }
+    }
+
+    for(int i = 0; i < poly.verts.cnt(); i++) {
+        poly.verts[i].pt += bisectors[i] * vertInset[i];
+    }
+}
+
 #endif

@@ -12,4 +12,6 @@
 
 #define str(...) #__VA_ARGS__
 
+float map(float x, float a, float b, float c, float d);
+
 #endif

@@ -29,21 +29,20 @@ int main() {
 
     loadMaterials();
 
-    Texture tex; 
-    tex.init();
-    tex.loadFromFile("res/mats/green-fabric/col.jpg");
-
     Player* player = players.spawn();
-    player->layer = 1;
-    player->init(-10.0f, 1.0f);
+    player->init(-2.0f, 1.0f, 1);
 
     loadLevel("test");
 
     double prevTime = glfwGetTime(); 
     while(!glfwWindowShouldClose(rnd.window)) {
+
+        arenaClear();
         double currTime = glfwGetTime();
         double dt = currTime - prevTime;
         prevTime = currTime;
+
+        phys->Step(1.0f / 60.0f, 9, 3);
 
         for(Player* curr = players.first(); curr; curr = players.next(curr)) {
             curr->update(dt);
@@ -53,23 +52,28 @@ int main() {
         sprintf(buf, "Frametime: %g", floor(dt * 1000));
         glfwSetWindowTitle(rnd.window, buf);
 
-        phys->Step(1.0f / 60.0f, 9, 3);
 
         rnd.camPos.z = 3.0f; 
         rnd.beginFrame();
+
+        rnd.beginLighting();
+
+        rnd.setAmbient(glm::vec3(1.0f, 1.0f, 1.5f));
+        rnd.setDirectional(glm::vec3(1.0f, -1.0f, -1.0f), glm::vec3(0.6f, 0.6f, 0.8f));
+        for(Player* curr = players.first(); curr; curr = players.next(curr)) { 
+            rnd.addPointLight(glm::vec3(0.0f, 1.0f, -1.0f), glm::vec3(10.0f));
+        }
+
+        rnd.endLighting();
 
         for(Block* curr = blocks.first(); curr; curr = blocks.next(curr)) {
             curr->render();
         }
 
-        tex.use(0);
-        rnd.meshShader.setIntUniform("uCol", 0);
         for(Player* curr = players.first(); curr; curr = players.next(curr)) {
             curr->render();
         }
 
-
-        arenaClear();
         updateInput();
         rnd.endFrame();
 

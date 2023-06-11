@@ -6,28 +6,29 @@
 #include "polygon/polygon.h"
 #include "box2d.h"
 
+struct BlockPiece {
+    Polygon<true> poly;
+    Mesh mesh;
+    int frontLayer;
+    int backLayer;
+    int material;
+};
+
 class Block {
 
 public:
 
-    void init(glm::vec2 pos);
+    void init(bool dynamic);
     void free();
     void render();
 
     void updateMesh();
+    int addPiece(int frontLayer, int backLayer, int material); 
 
-    void setDynamic(bool dynamic);
-
-    Polygon<true> poly;
-
-    int frontLayer;
-    int backLayer;
-
-    int material;
+    Arr<BlockPiece, true> pieces;
 
 private:
 
-    Mesh mesh;
     b2Body* body;
 
 };

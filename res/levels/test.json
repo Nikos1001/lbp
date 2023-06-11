@@ -1,141 +1,60 @@
 {
-    "poly": [
+    "blocks": [
         {
-            "front": 0,
-            "back": 2,
             "dynamic": false,
-            "material": "green-fabric",
-            "chains": [
-                [
-                    -100, 0,
-                     100, 0,
-                     100, -10,
-                    -100, -10
-                ]
+            "pieces": [
+                {
+                    "material": "green-fabric",
+                    "chains": [[-100, 0, 0, 0, 20, 5, 30, 5, 50, 0, 1000, 0, 1000, -50, -100, -50]],
+                    "front": 0,
+                    "back": 2
+                },
+                {
+                    "material": "factory-metal",
+                    "chains": [[25, 5, 25, 5.1, 26, 5.1, 26, 5]],
+                    "front": 2,
+                    "back": 2
+                },
+                {
+                    "material": "factory-metal",
+                    "chains": [[-5, 0, -5, 1, -3, 1, -3, 0]],
+                    "front": 1,
+                    "back": 1
+                },
+                {
+                    "material": "green-fabric",
+                    "chains": [[-5, 0, -5, 2, -3, 2, -3, 0]],
+                    "front": 2,
+                    "back": 2
+                }
             ]
         },
         {
-            "front": 0,
-            "back": 0,
             "dynamic": true,
-            "material": "green-fabric",
-            "chains": [
-                [
-                    1, 1.5,
-                    2, 0.5,
-                    5, 0,
-                    0, 0
-                ]
+            "pieces": [
+                {
+                    "material": "green-fabric",
+                    "chains": [[0, 0, 0, 2, 2, 2, 2, 0]],
+                    "front": 2,
+                    "back": 2
+                },
+                {
+                    "material": "green-fabric",
+                    "chains": [[0.5, 0.5, 0.5, 1.5, 1.5, 1.5, 1.5, 0.5]],
+                    "front": 1,
+                    "back": 1
+                }
             ]
         },
         {
-            "front": 1,
-            "back": 1,
             "dynamic": true,
-            "material": "green-fabric",
-            "chains": [
-                [
-                    -4, 2,
-                    -3.9, 2,
-                    -3.9, 0,
-                    -4, 0
-                ]
-            ]
-        },
-        {
-            "front": 1,
-            "back": 1,
-            "dynamic": true,
-            "material": "green-fabric",
-            "chains": [
-                [
-                    -5, 2,
-                    -4.9, 2,
-                    -4.9, 0,
-                    -5, 0
-                ]
-            ]
-        },
-        {
-            "front": 1,
-            "back": 1,
-            "dynamic": true,
-            "material": "green-fabric",
-            "chains": [
-                [
-                    -5.5, 2.1,
-                    -3.5, 2.1,
-                    -3.5, 2.08,
-                    -5.5, 2.08
-                ]
-            ]
-        },
-        {
-            "front": 1,
-            "back": 1,
-            "dynamic": true,
-            "material": "factory-metal",
-            "chains": [
-                [
-                    5, 7.1,
-                    6, 7.1,
-                    6, 2.1,
-                    5, 2.1
-                ]
-            ]
-        },
-        {
-            "front": 1,
-            "back": 1,
-            "dynamic": true,
-            "material": "green-fabric",
-            "chains": [
-                [
-                    9, 7.1,
-                    10, 7.1,
-                    10, 2.1,
-                    9, 2.1
-                ]
-            ]
-        },
-        {
-            "front": 1,
-            "back": 1,
-            "dynamic": false,
-            "material": "factory-metal",
-            "chains": [
-                [
-                    10, 0,
-                    15, 5,
-                    20, 5,
-                    20, 0
-                ],
-                [
-                    15, 2,
-                    19, 2,
-                    19, 4,
-                    15, 4
-                ],
-                [
-                    13, 1,
-                    13, 2,
-                    12, 1.9,
-                    12, 1
-                ]
-            ]
-        },
-        {
-            "front": 2,
-            "back": 2,
-            "dynamic": true,
-            "material": "factory-metal",
-            "chains": [
-                [
-                    -100, 100,
-                    -100, 200,
-                    100, 200,
-                    100, 100
-                ]
+            "pieces": [
+                {
+                    "material": "factory-metal",
+                    "chains": [[-15, 100, -15, 109, -6, 109, -6, 100]],
+                    "front": 2,
+                    "back": 2
+                }
             ]
         }
     ]

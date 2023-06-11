@@ -3,8 +3,8 @@
 #include "util.h"
 
 Material materials[] = {
-    (Material){"green-fabric", 0.3f},
-    (Material){"factory-metal", 1.5f}
+    (Material){"green-fabric", 0.5f, FLAT, 0.05f, 0.0f},
+    (Material){"factory-metal", 2.5f, SQUARE_BEVEL, 0.05f, 0.05f}
 };
 
 int nMats;

@@ -3,59 +3,89 @@
 #include "main.h"
 #include "input.h"
 
-#define BOX_RADIUS 0.2f
+#define CAPSULE_RADIUS 0.3f
+#define CAPSULE_HEIGHT 0.3f
 
-static void initLimb(PlayerLimb* limb, float x, float y) {
-    b2BodyDef bodyDef;
-    bodyDef.type = b2_dynamicBody;
-    bodyDef.position.Set(x, y);
-    limb->body = phys->CreateBody(&bodyDef);
-
-    b2CircleShape shape;
-    shape.m_radius = BOX_RADIUS;
-
+void CapsuleFixtures::init(b2Body* body, bool sensor) {
     b2FixtureDef fixtureDef;
-    fixtureDef.shape = &shape;
-    fixtureDef.density = 1.0f;
-    fixtureDef.friction = 0.2f;
+    fixtureDef.density = sensor ? 0.0f : 1.0f;
+    fixtureDef.isSensor = sensor;
 
-    limb->solid = limb->body->CreateFixture(&fixtureDef);
+    b2CircleShape headShape;
+    headShape.m_radius = CAPSULE_RADIUS;
+    if(sensor)
+        headShape.m_radius -= 0.05f;
+    headShape.m_p = b2Vec2(0.0f, CAPSULE_HEIGHT);
+    fixtureDef.shape = &headShape;
+    head = body->CreateFixture(&fixtureDef);
 
-    fixtureDef.isSensor = true;
-    fixtureDef.density = 0;
-    shape.m_p = b2Vec2(0.0f, 0.05f);
-    shape.m_radius -= 0.05f;
-    limb->frontSensor = limb->body->CreateFixture(&fixtureDef);
-    limb->backSensor = limb->body->CreateFixture(&fixtureDef);
+    b2CircleShape legShape;
+    legShape.m_radius = CAPSULE_RADIUS;
+    if(sensor)
+        legShape.m_radius -= 0.05f;
+    legShape.m_p = b2Vec2(0.0f, 0.0f);
+    fixtureDef.shape = &legShape;
+    legs = body->CreateFixture(&fixtureDef);
 
-    limb->body->SetFixedRotation(true);
+    b2PolygonShape bodyShape;
+    float hx = CAPSULE_RADIUS;
+    if(sensor)
+        hx -= 0.05f;
+    bodyShape.SetAsBox(hx, CAPSULE_HEIGHT / 2, b2Vec2(0.0f, CAPSULE_HEIGHT / 2), 0.0f);
+    fixtureDef.shape = &bodyShape;
+    torso = body->CreateFixture(&fixtureDef);
 }
 
-void Player::init(float x, float y) {
-    initLimb(&head, x, y + 0.5); 
-    initLimb(&legs, x, y); 
+void CapsuleFixtures::setLayer(int layer) {
+    uint32_t colMask = layer >= 0 ? 1 << layer : 0;
+    b2Filter filter;
+    filter.categoryBits = colMask;
+    filter.maskBits = colMask; 
+    head->SetFilterData(filter); 
+    torso->SetFilterData(filter); 
+    legs->SetFilterData(filter); 
+}
 
-    b2PrismaticJointDef prismatic;
-    b2Vec2 worldAxis(0.0f, 1.0f);
-    prismatic.Initialize(head.body, legs.body, legs.body->GetWorldCenter(), worldAxis);
-    prismatic.lowerTranslation = 0.0f;
-    prismatic.upperTranslation = 0.5f;
-    prismatic.enableLimit = true;
-    phys->CreateJoint(&prismatic);
+bool CapsuleFixtures::containsFixture(b2Fixture* fixture) {
+    return fixture == head || fixture == torso || fixture == legs;
+}
 
-    b2DistanceJointDef distance;
-    distance.Initialize(head.body, legs.body, head.body->GetWorldCenter(), legs.body->GetWorldCenter());
-    distance.frequencyHz = 15.0f;
-    distance.dampingRatio = 1.2f;
-    phys->CreateJoint(&distance);
+void Player::init(float x, float y, int layer) {
+
+    b2BodyDef bodyDef;
+    bodyDef.type = b2_dynamicBody;
+    bodyDef.bullet = true;
+    bodyDef.position.Set(x, y);
+    body = phys->CreateBody(&bodyDef);
+
+    solid.init(body, false);
+    crushSensor.init(body, true);
+    frontSensor.init(body, true);
+    backSensor.init(body, true);
+
+    b2CircleShape grabSensorShape;
+    grabSensorShape.m_radius = CAPSULE_RADIUS * 2;
+    grabSensorShape.m_p = b2Vec2(0.0f, CAPSULE_HEIGHT);
+    b2FixtureDef grabSensorDef;
+    grabSensorDef.shape = &grabSensorShape;
+    grabSensorDef.density = 0.0f;
+    grabSensorDef.isSensor = true;
+    grabSensor = body->CreateFixture(&grabSensorDef);
+
+    prevAngle = 0;
 
     jumpBuffer.init(0.1, 0.1, 0.2);
     rising = false;
+
+    this->layer = layer;
+
+    grabbing = false;
+    grabOther = NULL;
+    grabJoint = NULL;
 }
 
 void Player::free() {
-    phys->DestroyBody(head.body);
-    phys->DestroyBody(legs.body);
+    phys->DestroyBody(body);
 }
 
 void Player::render() {
@@ -63,24 +93,70 @@ void Player::render() {
     rnd.meshShader.use();
 
     glm::mat4 transform = glm::mat4(1.0f); 
-    transform = glm::translate(transform, glm::vec3(head.body->GetPosition().x, head.body->GetPosition().y, -layer - 0.5f));
-    transform = glm::scale(transform, glm::vec3(2 * BOX_RADIUS, 2 * BOX_RADIUS, 1.0f));
-    rnd.meshShader.setMat4Uniform("uModel", transform);
-    rnd.quad.render();
-
-    transform = glm::mat4(1.0f); 
-    transform = glm::translate(transform, glm::vec3(legs.body->GetPosition().x, legs.body->GetPosition().y, -layer - 0.5f));
-    transform = glm::scale(transform, glm::vec3(2 * BOX_RADIUS, 2 * BOX_RADIUS, 1.0f));
+    transform = glm::translate(transform, glm::vec3(body->GetPosition().x, body->GetPosition().y, -layer - 0.5f));
+    transform = glm::rotate(transform, body->GetAngle(), glm::vec3(0.0f, 0.0f, 1.0f));
+    transform = glm::translate(transform, glm::vec3(0.0f, CAPSULE_HEIGHT / 2, 0.0f));
+    transform = glm::scale(transform, glm::vec3(2 * CAPSULE_RADIUS, 2 * CAPSULE_RADIUS + CAPSULE_HEIGHT, 1.0f));
     rnd.meshShader.setMat4Uniform("uModel", transform);
     rnd.quad.render();
 
 }
 
-#define PLAYER_SPEED 5
-#define PLAYER_RUN_FORCE 1.1
-#define PLAYER_MAX_RUN_FORCE 10
+b2Vec2 getClosestPointOnFixture(b2Vec2 orig, b2Fixture* fixture) {
+    b2Vec2 closest;
+    float minDist = 999999999.0f;
+    for(float angle = 0.0f; angle <= 2 * M_PI; angle += 0.1f) {
+        b2RayCastInput in;
+        in.p1 = orig;
+        in.p2 = orig + b2Vec2(cosf(angle), sinf(angle));
+        in.maxFraction = 100.0f;
+        b2RayCastOutput out;
+        fixture->GetShape()->RayCast(&out, in, fixture->GetBody()->GetTransform(), 0);
+        if(out.fraction > 10.0f)
+            continue;
+        b2Vec2 point = in.p1 + out.fraction * (in.p2 - in.p1);
+        float dist = b2Distance(orig, point);
+        if(dist < minDist) {
+            closest = point;
+            minDist = dist;
+        }
+    }
+    return closest;
+}
 
-#define PLAYER_JUMP_FORCE 30
+GrabPoint Player::getGrabPoint() {
+    GrabPoint res; 
+    res.exists = false;
+    res.dist = 9999999999.0f;
+    b2Vec2 headPoint = body->GetWorldPoint(b2Vec2(0.0f, CAPSULE_HEIGHT));
+    for(b2ContactEdge* ce = body->GetContactList(); ce; ce = ce->next) {
+        b2Contact* c = ce->contact;
+        if(c->IsTouching()) {
+            if(c->GetFixtureB() == grabSensor) {
+                b2Fixture* fixture = c->GetFixtureA();
+                b2Vec2 pt = getClosestPointOnFixture(headPoint, fixture);
+                float dist = b2Distance(pt, headPoint);
+                if(dist < res.dist) {
+                    res.dist = dist;
+                    res.exists = true;
+                    res.point = pt;
+                    res.body = fixture->GetBody();
+                }
+            }
+        }
+    }
+    return res;
+}
+
+#define PLAYER_STABLE_P 25.0f
+#define PLAYER_STABLE_D 70.0f
+#define PLAYER_STABLE_MAX_TORQUE 300.0f
+
+#define PLAYER_SPEED 5
+#define PLAYER_RUN_FORCE 15
+#define PLAYER_MAX_RUN_FORCE 50
+
+#define PLAYER_JUMP_FORCE 200
 #define PLAYER_RISE_GRAVITY 0.7
 #define PLAYER_HANG_GRAVITY 1.1
 #define PLAYER_FALL_GRAVITY 1.6
@@ -91,30 +167,48 @@ void Player::update(float dt) {
     bool grounded = false;
     bool objInFront = false;
     bool objBehind = false;
-    for(b2ContactEdge* ce = legs.body->GetContactList(); ce; ce = ce->next) {
+    bool crushed = false;
+    for(b2ContactEdge* ce = body->GetContactList(); ce; ce = ce->next) {
         b2Contact* c = ce->contact;
-        if(c->IsTouching() && c->GetFixtureB() == legs.solid) {
-            b2WorldManifold manifold;
-            c->GetWorldManifold(&manifold);
-            float dy = legs.body->GetWorldCenter().y - manifold.points[0].y;
-            grounded |= dy < 0.2 && dy > 0.13;
+        if(c->IsTouching()) {
+            b2Fixture* fixture = c->GetFixtureB();
+            if(fixture == solid.legs) {
+                b2WorldManifold manifold;
+                c->GetWorldManifold(&manifold);
+                float dy = body->GetWorldCenter().y - manifold.points[0].y;
+                grounded |= dy < 1.5 * CAPSULE_RADIUS && dy > 1.25 * CAPSULE_RADIUS;
+            }
+            if(crushSensor.containsFixture(fixture)) {
+                crushed = true;
+            }
+            if(frontSensor.containsFixture(fixture)) {
+                objInFront = true;
+            }
+            if(backSensor.containsFixture(fixture))
+                objBehind = true;
         }
-        if(c->IsTouching() && c->GetFixtureB() == legs.frontSensor)
-            objInFront = true;
-        if(c->IsTouching() && c->GetFixtureB() == legs.backSensor)
-            objBehind = true;
-    }
-    for(b2ContactEdge* ce = head.body->GetContactList(); ce; ce = ce->next) {
-        b2Contact* c = ce->contact;
-        if(c->IsTouching() && c->GetFixtureB() == head.frontSensor)
-            objInFront = true;
-        if(c->IsTouching() && c->GetFixtureB() == head.backSensor)
-            objBehind = true;
     }
 
-    rnd.camPos.x = head.body->GetPosition().x;
-    rnd.camPos.y = head.body->GetPosition().y;
+    if(crushed) {
+        audio.play("squish");
+        kill();
+        return;
+    }
 
+    // Camera tracking
+    rnd.camPos.x = body->GetPosition().x;
+    rnd.camPos.y = body->GetPosition().y + 1;
+
+    // Rotation stabilization
+    float angle = body->GetAngle();
+    float dAngle = angle - prevAngle;
+    float stableTorque = -angle * PLAYER_STABLE_P - dAngle * PLAYER_STABLE_D;
+    if(fabs(stableTorque) > PLAYER_STABLE_MAX_TORQUE)
+        stableTorque = PLAYER_STABLE_MAX_TORQUE * stableTorque / fabs(stableTorque);
+    body->ApplyTorque(stableTorque, true);
+    prevAngle = angle;
+
+    // Running
     float horizInput = 0.0f;
     if(keyDown('A'))
         horizInput -= 1.0f;
@@ -122,7 +216,7 @@ void Player::update(float dt) {
         horizInput += 1.0f;
     
     float targetXSpeed = horizInput * PLAYER_SPEED;
-    float currXSpeed = head.body->GetLinearVelocity().x;
+    float currXSpeed = body->GetLinearVelocity().x;
 
     float runForce = PLAYER_RUN_FORCE * (targetXSpeed - currXSpeed);
 
@@ -130,6 +224,8 @@ void Player::update(float dt) {
         runForce = runForce / fabs(runForce) * PLAYER_MAX_RUN_FORCE;
 
     applyForce(glm::vec2(runForce, 0.0f));
+
+    // Jumping
 
     jumpBuffer.update(dt);
     jumpBuffer.setActionAvailable(grounded);
@@ -142,7 +238,7 @@ void Player::update(float dt) {
     }
 
     float gravity;
-    if(head.body->GetLinearVelocity().y > 0) {
+    if(body->GetLinearVelocity().y > 0) {
         if(rising) {
             gravity = PLAYER_RISE_GRAVITY; 
             if(!keyDown(' '))
@@ -153,47 +249,58 @@ void Player::update(float dt) {
     } else {
         gravity = PLAYER_FALL_GRAVITY;
     }
-    head.body->SetGravityScale(gravity);
-    legs.body->SetGravityScale(gravity);
+    body->SetGravityScale(gravity);
+    body->SetGravityScale(gravity);
 
-    if(keyPressed('W') && !objBehind && layer != MAX_LAYER)
+    // Layer switching
+    if(keyPressed('W') && !objBehind && layer != MAX_LAYER && !grabbing)
         layer++;
-    if(keyPressed('S') && !objInFront && layer != 0)
+    if(keyPressed('S') && !objInFront && layer != 0 && !grabbing)
         layer--;
 
-    uint32_t colMask = 1 << layer;
-    b2Filter filter;
-    filter.categoryBits = colMask;
-    filter.maskBits = colMask;
-    head.solid->SetFilterData(filter);
-    legs.solid->SetFilterData(filter);
 
-    uint32_t frontColMask = 1 << (layer - 1);
-    if(layer == 0)
-        frontColMask = 0;
-    filter.categoryBits = frontColMask;
-    filter.maskBits = frontColMask;
-    head.frontSensor->SetFilterData(filter);
-    legs.frontSensor->SetFilterData(filter);
+    solid.setLayer(layer); 
+    crushSensor.setLayer(layer);
+    frontSensor.setLayer(layer - 1); 
+    backSensor.setLayer(layer + 1); 
 
-    uint32_t backColMask = 1 << (layer + 1);
-    filter.categoryBits = backColMask;
-    filter.maskBits = backColMask;
-    head.backSensor->SetFilterData(filter);
-    legs.backSensor->SetFilterData(filter);
+    uint32_t grabSensorFilterMask = 1 << layer;
+    b2Filter grabSensorFilter;
+    grabSensorFilter.categoryBits = grabSensorFilterMask;
+    grabSensorFilter.maskBits = grabSensorFilterMask;
+    grabSensor->SetFilterData(grabSensorFilter);
 
-    if(head.body->GetPosition().y - legs.body->GetPosition().y < 0.35) {
-        printf("Player crushed!\n");
-        audio.play("squish");
-        kill();
-        return;
+    // Grabbing
+    bool shouldGrab = keyDown('O');
+    if(grabbing) {
+        if(!shouldGrab) {
+            grabbing = false;
+            grabOther = NULL;
+            phys->DestroyJoint(grabJoint);
+            grabJoint = NULL;
+        }
+    } else {
+        if(keyPressed('O')) {
+            GrabPoint point = getGrabPoint();
+            if(point.exists) {
+                grabbing = true;
+                grabOther = point.body;
+
+                b2DistanceJointDef distDef;
+                b2Vec2 headPoint = body->GetWorldPoint(b2Vec2(0.0f, CAPSULE_HEIGHT));
+                distDef.Initialize(body, point.body, headPoint, point.point);
+                distDef.collideConnected = true;
+                distDef.dampingRatio = 1;
+                distDef.frequencyHz = 10.0f;
+                grabJoint = (b2DistanceJoint*)phys->CreateJoint(&distDef);
+            }
+        }
     }
 
 }
 
 void Player::applyForce(glm::vec2 force) {
-    head.body->ApplyForceToCenter(b2Vec2(force.x, force.y), true);
-    legs.body->ApplyForceToCenter(b2Vec2(force.x, force.y), true);
+    body->ApplyForceToCenter(b2Vec2(force.x, force.y), true);
 }
 
 void Player::kill() {

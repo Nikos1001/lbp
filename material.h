@@ -4,9 +4,17 @@
 
 #include "renderer/texture.h"
 
+enum MaterialMeshGen {
+    FLAT,
+    SQUARE_BEVEL
+};
+
 struct Material {
     const char* name;
     float density;
+    MaterialMeshGen meshGen; 
+    float bevelWidth;
+    float faceInset;
     Texture col;
     Texture norm;
     Texture arm;
