@@ -4,7 +4,7 @@
 
 #include "box2d.h"
 #include "input.h"
-#include "util.h"
+#include "common/util.h"
 
 class CapsuleFixtures {
 

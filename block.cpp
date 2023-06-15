@@ -15,8 +15,10 @@ void Block::init(bool dynamic) {
 void Block::free() {
     phys->DestroyBody(body);
     for(int i = 0; i < pieces.cnt(); i++) {
-        pieces[i].mesh.free();
-        pieces[i].poly.free();
+        if(!pieces[i].isModelMat) {
+            pieces[i].mesh.free();
+            pieces[i].poly.free();
+        }
     }
     pieces.free();
 }
@@ -28,7 +30,16 @@ void Block::render() {
     transform = glm::rotate(transform, body->GetAngle(), glm::vec3(0.0f, 0.0f, 1.0f));
     for(int i = 0; i < pieces.cnt(); i++) {
         int material = pieces[i].material;
-        rnd.renderMesh(pieces[i].mesh, materials[material].col, materials[material].norm, transform);
+        if(!pieces[i].isModelMat) {
+            rnd.renderMesh(pieces[i].mesh, materials[material].col, materials[material].norm, transform);
+        } else {
+            glm::mat4 trans = glm::mat4(1.0f);
+            glm::vec2 localPos = pieces[i].pos;
+            b2Vec2 worldPos = body->GetWorldPoint(b2Vec2(localPos.x, localPos.y));
+            trans = glm::translate(trans, glm::vec3(worldPos.x, worldPos.y, -pieces[i].frontLayer - 1.0f));
+            trans = glm::rotate(trans, body->GetAngle(), glm::vec3(0.0f, 0.0f, 1.0f));
+            rnd.renderMesh(modelMaterials[material].mesh, modelMaterials[material].col, modelMaterials[material].norm, trans);
+        }
     }
 }
 
@@ -145,20 +156,41 @@ static void generateBlockMesh(Polygon<true>& poly, Mesh& mesh, int frontLayer, i
 
 void updatePiece(BlockPiece& piece, b2Body* body) {
 
-    generateBlockMesh(piece.poly, piece.mesh, piece.frontLayer, piece.backLayer, piece.material);
+    if(!piece.isModelMat) {
+        generateBlockMesh(piece.poly, piece.mesh, piece.frontLayer, piece.backLayer, piece.material);
+    }
 
     Arr<int, false> tris;
     tris.init();
-    triangulate(piece.poly, tris);
+    if(!piece.isModelMat) {
+        triangulate(piece.poly, tris);
+    } else {
+        triangulate(modelMaterials[piece.material].polygon, tris);
+    }
 
     for(int i = 0; i < tris.cnt(); i += 3) {
         int i0 = tris[i];
         int i1 = tris[i + 1];
         int i2 = tris[i + 2];
 
-        glm::vec2 p0 = piece.poly.verts[i0].pt;
-        glm::vec2 p1 = piece.poly.verts[i1].pt;
-        glm::vec2 p2 = piece.poly.verts[i2].pt;
+        glm::vec2 p0, p1, p2;
+        if(!piece.isModelMat) {
+            p0 = piece.poly.verts[i0].pt;
+            p1 = piece.poly.verts[i1].pt;
+            p2 = piece.poly.verts[i2].pt;
+        } else {
+            int mat = piece.material;
+            p0 = modelMaterials[mat].polygon.verts[i0].pt;
+            p1 = modelMaterials[mat].polygon.verts[i1].pt;
+            p2 = modelMaterials[mat].polygon.verts[i2].pt;
+
+            glm::mat4 transform = glm::mat4(1.0f);
+            transform = glm::translate(transform, glm::vec3(piece.pos, 0.0f));
+
+            p0 = transform * glm::vec4(p0, 0.0f, 1.0f);
+            p1 = transform * glm::vec4(p1, 0.0f, 1.0f);
+            p2 = transform * glm::vec4(p2, 0.0f, 1.0f);
+        }
 
         float area = triArea(p0, p1, p2);
         if(area < 0.0001f)
@@ -201,13 +233,16 @@ void Block::updateMesh() {
     }
 }
 
-int Block::addPiece(int frontLayer, int backLayer, int material) {
+int Block::addPiece(bool modelMat, int frontLayer, int backLayer, int material) {
     BlockPiece piece;
+    piece.isModelMat = modelMat;
     piece.frontLayer = frontLayer;
     piece.backLayer = backLayer;
     piece.material = material;
-    piece.mesh.init();
-    piece.poly.init();
+    if(!modelMat) {
+        piece.mesh.init();
+        piece.poly.init();
+    }
     pieces.add(piece);
     return pieces.cnt() - 1;
 }

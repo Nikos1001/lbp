@@ -3,7 +3,7 @@
 #define RENDERER_H
 
 #include "opengl.h"
-#include "../util.h"
+#include "../common/util.h"
 #include "shader.h"
 #include "texture.h"
 #include "mesh.h"

@@ -7,11 +7,17 @@
 #include "box2d.h"
 
 struct BlockPiece {
-    Polygon<true> poly;
-    Mesh mesh;
+    bool isModelMat;
     int frontLayer;
     int backLayer;
     int material;
+
+    // poly
+    Polygon<true> poly;
+    Mesh mesh;
+
+    // model
+    glm::vec2 pos;
 };
 
 class Block {
@@ -23,11 +29,9 @@ public:
     void render();
 
     void updateMesh();
-    int addPiece(int frontLayer, int backLayer, int material); 
+    int addPiece(bool modelMat, int frontLayer, int backLayer, int material); 
 
     Arr<BlockPiece, true> pieces;
-
-private:
 
     b2Body* body;
 

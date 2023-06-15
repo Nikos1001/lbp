@@ -2,7 +2,7 @@
 #ifndef SHADER_H
 #define SHADER_H
 
-#include "../util.h"
+#include "../common/util.h"
 
 class Shader {
 

@@ -6,12 +6,15 @@
 #include "input.h"
 #include "level.h"
 #include "material.h"
+#include "common/resManager.h"
+#include "assets.h"
 
 Renderer rnd;
 b2World* phys;
 Audio audio;
 ObjList<Block> blocks;
 ObjList<Player> players;
+ObjList<Bolt> bolts;
 
 int main() {
 
@@ -24,14 +27,16 @@ int main() {
 
     audio.init();
 
-    blocks.init();
-    players.init();
+    ObjList<Block>::init();
+    ObjList<Player>::init();
+    ObjList<Bolt>::init();
 
     loadMaterials();
 
     Player* player = players.spawn();
     player->init(-2.0f, 1.0f, 1);
 
+    loadAssets();
     loadLevel("test");
 
     double prevTime = glfwGetTime(); 
@@ -44,7 +49,7 @@ int main() {
 
         phys->Step(1.0f / 60.0f, 9, 3);
 
-        for(Player* curr = players.first(); curr; curr = players.next(curr)) {
+        for(Player* curr = ObjList<Player>::first(); curr; curr = ObjList<Player>::next(curr)) {
             curr->update(dt);
         }
 
@@ -58,19 +63,21 @@ int main() {
 
         rnd.beginLighting();
 
-        rnd.setAmbient(glm::vec3(1.0f, 1.0f, 1.5f));
-        rnd.setDirectional(glm::vec3(1.0f, -1.0f, -1.0f), glm::vec3(0.6f, 0.6f, 0.8f));
-        for(Player* curr = players.first(); curr; curr = players.next(curr)) { 
+        rnd.setAmbient(glm::vec3(1.0f, 1.0f, 1.0f));
+        rnd.setDirectional(glm::vec3(1.0f, -1.0f, -1.0f), glm::vec3(0.6f, 0.6f, 0.6f));
+        for(Player* curr = ObjList<Player>::first(); curr; curr = ObjList<Player>::next(curr)) { 
             rnd.addPointLight(glm::vec3(0.0f, 1.0f, -1.0f), glm::vec3(10.0f));
         }
 
         rnd.endLighting();
 
-        for(Block* curr = blocks.first(); curr; curr = blocks.next(curr)) {
+        for(Block* curr = ObjList<Block>::first(); curr; curr = ObjList<Block>::next(curr)) {
             curr->render();
         }
-
-        for(Player* curr = players.first(); curr; curr = players.next(curr)) {
+        for(Bolt* curr = ObjList<Bolt>::first(); curr; curr = ObjList<Bolt>::next(curr)) {
+            curr->render();
+        }
+        for(Player* curr = ObjList<Player>::first(); curr; curr = ObjList<Player>::next(curr)) {
             curr->render();
         }
 

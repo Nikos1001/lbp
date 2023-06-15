@@ -14,12 +14,12 @@ class ObjList {
 
 public:
 
-    void init() {
+    static void init() {
         free = NULL;
         cnt = 0;
     }
 
-    T* spawn() {
+    static T* spawn() {
         ObjListNode<T>* result;
         if(free) {
             result = free;
@@ -32,7 +32,7 @@ public:
         return &result->obj;
     }
 
-    void kill(T* obj) {
+    static void kill(T* obj) {
         obj->free();
         ObjListNode<T>* node = (ObjListNode<T>*)obj; 
         node->next = free;
@@ -40,14 +40,14 @@ public:
         free = node; 
     }
 
-    T* first() {
+    static T* first() {
         for(int i = 0; i < cnt; i++)
             if(objs[i].active)
                 return &objs[i].obj;
         return NULL;
     }
 
-    T* next(T* curr) {
+    static T* next(T* curr) {
         int i = (ObjListNode<T>*)curr - objs;
         i++;
         for(; i < cnt; i++)
@@ -60,9 +60,9 @@ private:
 
     // silly way to allocate things. relies on os only allocating globals that are used
     // but this guarantees that things don't move around in memory, which is pretty cool
-    ObjListNode<T> objs[1024];
-    ObjListNode<T>* free;
-    int cnt;
+    static inline ObjListNode<T> objs[UINT16_MAX];
+    static inline ObjListNode<T>* free;
+    static inline int cnt;
 
 };
 

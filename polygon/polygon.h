@@ -2,8 +2,8 @@
 #ifndef POLYGON_H
 #define POLYGON_H
 
-#include "../mem.h"
-#include "../util.h"
+#include "../common/mem.h"
+#include "../common/util.h"
 #include "geoutil.h"
 
 struct Vert {

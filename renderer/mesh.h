@@ -2,7 +2,7 @@
 #ifndef MESH_H
 #define MESH_H
 
-#include "../util.h"
+#include "../common/util.h"
 
 struct MeshVert {
     glm::vec3 pos;
@@ -18,6 +18,7 @@ public:
     void free();
     void upload(int nVerts, MeshVert* verts, int tris, unsigned int* idxs);
     void render();
+    void loadFrom(const char* path);
 
 private:
     unsigned int vao;

@@ -155,6 +155,7 @@ GrabPoint Player::getGrabPoint() {
 #define PLAYER_SPEED 5
 #define PLAYER_RUN_FORCE 15
 #define PLAYER_MAX_RUN_FORCE 50
+#define PLAYER_JUMP_RUN_FORCE 40
 
 #define PLAYER_JUMP_FORCE 200
 #define PLAYER_RISE_GRAVITY 0.7
@@ -172,7 +173,8 @@ void Player::update(float dt) {
         b2Contact* c = ce->contact;
         if(c->IsTouching()) {
             b2Fixture* fixture = c->GetFixtureB();
-            if(fixture == solid.legs) {
+            b2Body* otherBody = c->GetFixtureA()->GetBody();
+            if(fixture == solid.legs && otherBody != grabOther) {
                 b2WorldManifold manifold;
                 c->GetWorldManifold(&manifold);
                 float dy = body->GetWorldCenter().y - manifold.points[0].y;
@@ -220,8 +222,9 @@ void Player::update(float dt) {
 
     float runForce = PLAYER_RUN_FORCE * (targetXSpeed - currXSpeed);
 
-    if(fabs(runForce) > PLAYER_MAX_RUN_FORCE)
-        runForce = runForce / fabs(runForce) * PLAYER_MAX_RUN_FORCE;
+    float maxForce = grounded ? PLAYER_MAX_RUN_FORCE : PLAYER_JUMP_RUN_FORCE;
+    if(fabs(runForce) > maxForce)
+        runForce = runForce / fabs(runForce) * maxForce;
 
     applyForce(glm::vec2(runForce, 0.0f));
 
@@ -290,8 +293,8 @@ void Player::update(float dt) {
                 b2Vec2 headPoint = body->GetWorldPoint(b2Vec2(0.0f, CAPSULE_HEIGHT));
                 distDef.Initialize(body, point.body, headPoint, point.point);
                 distDef.collideConnected = true;
-                distDef.dampingRatio = 1;
-                distDef.frequencyHz = 10.0f;
+                distDef.dampingRatio = 1.5f;
+                distDef.frequencyHz = 5.0f;
                 grabJoint = (b2DistanceJoint*)phys->CreateJoint(&distDef);
             }
         }
@@ -304,5 +307,5 @@ void Player::applyForce(glm::vec2 force) {
 }
 
 void Player::kill() {
-    players.kill(this);
+    ObjList<Player>::kill(this);
 }

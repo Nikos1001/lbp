@@ -47,3 +47,40 @@ void Mesh::render() {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
     glDrawElements(GL_TRIANGLES, 3 * nTris, GL_UNSIGNED_INT, 0);
 }
+
+#include "../lib/assimp/include/assimp/Importer.hpp"
+#include "../lib/assimp/include/assimp/scene.h"
+#include "../lib/assimp/include/assimp/postprocess.h"
+void Mesh::loadFrom(const char* path) {
+
+    Assimp::Importer import;
+    const aiScene* scene = import.ReadFile(path, aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_GenUVCoords); 
+
+    aiMesh* mesh = scene->mMeshes[0];
+    int nVerts = mesh->mNumVertices;
+    MeshVert verts[nVerts];
+    for(int i = 0; i < nVerts; i++) {
+        verts[i].pos.x = mesh->mVertices[i].x;
+        verts[i].pos.y = mesh->mVertices[i].y;
+        verts[i].pos.z = mesh->mVertices[i].z;
+        verts[i].uv.x = mesh->mTextureCoords[0][i].x;
+        verts[i].uv.y = mesh->mTextureCoords[0][i].y;
+        verts[i].norm.x = mesh->mNormals[i].x;
+        verts[i].norm.y = mesh->mNormals[i].y;
+        verts[i].norm.z = mesh->mNormals[i].z;
+        verts[i].tang.x = mesh->mTangents[i].x;
+        verts[i].tang.y = mesh->mTangents[i].y;
+        verts[i].tang.z = mesh->mTangents[i].z;
+    }
+
+    int numTris = mesh->mNumFaces;
+    unsigned int indicies[numTris * 3];
+    for(int i = 0; i < numTris; i++) {
+        indicies[3 * i + 0] = mesh->mFaces[i].mIndices[0];
+        indicies[3 * i + 1] = mesh->mFaces[i].mIndices[1];
+        indicies[3 * i + 2] = mesh->mFaces[i].mIndices[2];
+    }
+
+    init();
+    upload(nVerts, verts, numTris, indicies);
+}

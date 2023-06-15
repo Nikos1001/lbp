@@ -50,12 +50,81 @@
             "dynamic": true,
             "pieces": [
                 {
-                    "material": "factory-metal",
-                    "chains": [[-15, 100, -15, 109, -6, 109, -6, 100]],
+                    "material": "green-fabric",
+                    "chains": [[-16, 0, -16, 10, -6, 10, -6, 0]],
                     "front": 2,
                     "back": 2
                 }
             ]
+        },
+        {
+            "dynamic": true,
+            "pieces": [
+                {
+                    "material": "green-fabric",
+                    "chains": [[-8, 2, -8, 3, -7, 3, -7, 2]],
+                    "front": 1,
+                    "back": 1
+                }
+            ]
+        },
+        {
+            "dynamic": true,
+            "pieces": [
+                {
+                    "material": "factory-metal",
+                    "chains": [[-10, 6, -10, 6.25, -6, 6.25, -6, 6]],
+                    "front": 1,
+                    "back": 1
+                }
+            ]
+        },
+        {
+            "dynamic": true,
+            "pieces": [
+                {
+                    "material": "green-fabric",
+                    "chains": [[-10, 6.25, -9.75, 6.25, -9.75, 4, -10, 4]],
+                    "front": 0,
+                    "back": 0
+                }
+            ]
+        },
+        {
+            "dynamic": true,
+            "pieces": [
+                {
+                    "model": "starlight",
+                    "position": [25.5, 10],
+                    "layer": 2
+                }
+            ]
+        }
+    ],
+    "joints": [
+        {
+            "type": "bolt",
+            "a": 2,
+            "aPieceIdx": 0,
+            "b": 3,
+            "bPieceIdx": 0,
+            "position": [-7.5, 2.5]
+        },
+        {
+            "type": "bolt",
+            "a": 2,
+            "aPieceIdx": 0,
+            "b": 4,
+            "bPieceIdx": 0,
+            "position": [-8, 6.125]
+        },
+        {
+            "type": "bolt",
+            "a": 4,
+            "aPieceIdx": 0,
+            "b": 5,
+            "bPieceIdx": 0,
+            "position": [-9.875, 6.125]
         }
     ]
 }

@@ -24,7 +24,7 @@ out vec3 pPos;
 void main() {
     gl_Position = uProjView * uModel * vec4(aPos, 1.0f);
     pPos = (uModel * vec4(aPos, 1.0f)).xyz; 
-    pUv = aUv / 5; 
+    pUv = aUv; 
     mat3 normalTransform = mat3(transpose(inverse(uModel)));
     pNorm = normalTransform * aNorm;
     pTang = normalTransform * aTang;
@@ -72,7 +72,7 @@ void main() {
     mapNorm = -mapNorm.y * pTang + mapNorm.x * pBitang + mapNorm.z * pNorm;
     mapNorm = normalize(mapNorm);
     vec3 rawNorm = pNorm; 
-    vec3 norm = lerp(rawNorm, mapNorm, 1);
+    vec3 norm = lerp(rawNorm, mapNorm, 0);
     norm = normalize(norm);
     
     vec3 light = vec3(uAmbient);
@@ -86,7 +86,10 @@ void main() {
 
     oColor = vec4(light, 1.0f) * texture(uCol, pUv); 
 
-    //oColor = vec4(norm / 2 + 0.5, 1.0f);
+    // oColor = vec4(norm / 2 + 0.5, 1.0f);
+    //oColor = vec4(pTang / 2 + 0.5, 1.0f);
+    //oColor = vec4(pUv, 0.0f, 1.0f);
+    // oColor = vec4(light * 0.1f, 1.0f);
 } 
 
 );

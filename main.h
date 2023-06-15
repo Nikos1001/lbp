@@ -8,12 +8,11 @@
 #include "objList.h"
 #include "block.h"
 #include "player.h"
+#include "bolt.h"
 
 extern Renderer rnd; 
 extern b2World* phys;
 extern Audio audio;
-extern ObjList<Block> blocks; 
-extern ObjList<Player> players;
 
 #define MAX_LAYER 2
 
