@@ -1,0 +1,20 @@
+{
+    "materials": [
+        {
+            "name": "factory-metal",
+            "density": 25,
+            "bevelType": "flat",
+            "bevelWidth": 0.05,
+            "faceInset": 0,
+            "uvScale": 5
+        },
+        {
+            "name": "rust",
+            "density": 25,
+            "bevelType": "square",
+            "bevelWidth": 0.075,
+            "faceInset": 0.1,
+            "uvScale": 5
+        }
+    ]
+}

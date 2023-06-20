@@ -3,7 +3,7 @@ project(lbp)
 
 add_executable(lbp 
     main.cpp common/mem.cpp input.cpp common/util.cpp
-    renderer/renderer.cpp renderer/mesh.cpp renderer/shader.cpp renderer/texture.cpp
+    renderer/renderer.cpp renderer/mesh.cpp renderer/shader.cpp renderer/texture.cpp renderer/framebuffer.cpp
     polygon/polygon.cpp polygon/geoutil.cpp
     audio/audio.cpp
     assets.cpp

@@ -5,7 +5,6 @@
 #include "material.h"
 
 #include <fstream>
-using json = nlohmann::json;
 
 void loadModelPiece(json& pieceData, Block* block) {
     std::string modelName = (std::string)pieceData["model"];
@@ -22,7 +21,7 @@ void loadPolyPiece(json& pieceData, Block* block) {
     std::string materialName = (std::string)pieceData["material"];
     const char* materialNameCStr = materialName.c_str();
     int material = 0;
-    for(int i = 0; i < nMats; i++)
+    for(int i = 0; i < materials.cnt(); i++)
         if(strcmp(materials[i].name, materialNameCStr) == 0)
             material = i;
     int pieceIdx = block->addPiece(false, (int)pieceData["front"], (int)pieceData["back"], material);

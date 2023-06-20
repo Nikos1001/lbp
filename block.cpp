@@ -31,19 +31,22 @@ void Block::render() {
     for(int i = 0; i < pieces.cnt(); i++) {
         int material = pieces[i].material;
         if(!pieces[i].isModelMat) {
-            rnd.renderMesh(pieces[i].mesh, materials[material].col, materials[material].norm, transform);
+            rnd.renderMesh(pieces[i].mesh, 3, materials[material].col, materials[material].norm, materials[material].arm, transform, materials[material].uvScale, materials[material].normStrength, 0.0f);
         } else {
             glm::mat4 trans = glm::mat4(1.0f);
             glm::vec2 localPos = pieces[i].pos;
             b2Vec2 worldPos = body->GetWorldPoint(b2Vec2(localPos.x, localPos.y));
             trans = glm::translate(trans, glm::vec3(worldPos.x, worldPos.y, -pieces[i].frontLayer - 1.0f));
             trans = glm::rotate(trans, body->GetAngle(), glm::vec3(0.0f, 0.0f, 1.0f));
-            rnd.renderMesh(modelMaterials[material].mesh, modelMaterials[material].col, modelMaterials[material].norm, trans);
+            rnd.renderMesh(modelMaterials[material].mesh, modelMaterials[material].col, modelMaterials[material].norm, modelMaterials[material].arm, trans, 1.0f, 0.0f, modelMaterials[material].emission);
         }
     }
 }
 
 static void generateBlockMesh(Polygon<true>& poly, Mesh& mesh, int frontLayer, int backLayer, int material) {
+
+    float uvScale = materials[material].uvScale;
+
     Polygon<false> insetPoly;
     insetPoly.copyFrom(poly);
     inset(insetPoly, materials[material].bevelWidth);
@@ -59,7 +62,7 @@ static void generateBlockMesh(Polygon<true>& poly, Mesh& mesh, int frontLayer, i
     if(materials[material].meshGen == SQUARE_BEVEL)
         faceZ -= materials[material].faceInset;
     for(int i = 0; i < poly.verts.cnt(); i++) {
-        verts.add((MeshVert){glm::vec3(insetPoly.verts[i].pt, faceZ), insetPoly.verts[i].pt, glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(1.0f, 0.0f, 0.0f)});
+        verts.add((MeshVert){glm::vec3(insetPoly.verts[i].pt, faceZ), insetPoly.verts[i].pt / uvScale, glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(1.0f, 0.0f, 0.0f), 0.0f});
     }
     
     // Generate borders
@@ -86,10 +89,10 @@ static void generateBlockMesh(Polygon<true>& poly, Mesh& mesh, int frontLayer, i
             float backZ = -(float)backLayer - 1.0f;
 
             // Border
-            int v0 = verts.add((MeshVert){glm::vec3(p0, frontZ), glm::vec2(perim, 0.0f), norm, tang});
-            int v1 = verts.add((MeshVert){glm::vec3(p1, frontZ), glm::vec2(newPerim, 0.0f), norm, tang});
-            int v2 = verts.add((MeshVert){glm::vec3(p0, backZ), glm::vec2(perim, backZ - frontZ), norm, tang});
-            int v3 = verts.add((MeshVert){glm::vec3(p1, backZ), glm::vec2(newPerim, backZ - frontZ), norm, tang});
+            int v0 = verts.add((MeshVert){glm::vec3(p0, frontZ), glm::vec2(perim, 0.0f) / uvScale, norm, tang, 2.0f});
+            int v1 = verts.add((MeshVert){glm::vec3(p1, frontZ), glm::vec2(newPerim, 0.0f) / uvScale, norm, tang, 2.0f});
+            int v2 = verts.add((MeshVert){glm::vec3(p0, backZ), glm::vec2(perim, backZ - frontZ) / uvScale, norm, tang, 2.0f});
+            int v3 = verts.add((MeshVert){glm::vec3(p1, backZ), glm::vec2(newPerim, backZ - frontZ) / uvScale, norm, tang, 2.0f});
 
             tris.add(v0);
             tris.add(v1);
@@ -102,10 +105,10 @@ static void generateBlockMesh(Polygon<true>& poly, Mesh& mesh, int frontLayer, i
             if(materials[material].meshGen == FLAT) {
                 glm::vec3 bitang = glm::normalize(glm::vec3(p0, frontZ) - glm::vec3(innerP0, faceZ));
                 glm::vec3 bevelNorm = glm::normalize(glm::cross(tang, bitang));
-                int v4 = verts.add((MeshVert){glm::vec3(innerP0, faceZ), glm::vec2(perim, 0.0f), bevelNorm, tang});
-                int v5 = verts.add((MeshVert){glm::vec3(innerP1, faceZ), glm::vec2(newPerim, 0.0f), bevelNorm, tang});
-                int v6 = verts.add((MeshVert){glm::vec3(p0, frontZ), glm::vec2(perim, 1.0f), bevelNorm, tang});
-                int v7 = verts.add((MeshVert){glm::vec3(p1, frontZ), glm::vec2(newPerim, 1.0f), bevelNorm, tang});
+                int v4 = verts.add((MeshVert){glm::vec3(innerP0, faceZ), glm::vec2(perim / uvScale, 0.0f), bevelNorm, tang, 1.0f});
+                int v5 = verts.add((MeshVert){glm::vec3(innerP1, faceZ), glm::vec2(newPerim / uvScale, 0.0f), bevelNorm, tang, 1.0f});
+                int v6 = verts.add((MeshVert){glm::vec3(p0, frontZ), glm::vec2(perim / uvScale, 1.0f), bevelNorm, tang, 1.0f});
+                int v7 = verts.add((MeshVert){glm::vec3(p1, frontZ), glm::vec2(newPerim / uvScale, 1.0f), bevelNorm, tang, 1.0f});
                 tris.add(v4);
                 tris.add(v5);
                 tris.add(v6);
@@ -121,10 +124,11 @@ static void generateBlockMesh(Polygon<true>& poly, Mesh& mesh, int frontLayer, i
                 glm::vec3 inBP0 = glm::vec3(innerP0, faceZ);
                 glm::vec3 inBP1 = glm::vec3(innerP1, faceZ);
 
-                int v4 = verts.add((MeshVert){outP0, p0, glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(1.0f, 0.0f, 0.0f)});
-                int v5 = verts.add((MeshVert){outP1, p1, glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(1.0f, 0.0f, 0.0f)});
-                int v6 = verts.add((MeshVert){inFP0, innerP0, glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(1.0f, 0.0f, 0.0f)});
-                int v7 = verts.add((MeshVert){inFP1, innerP1, glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(1.0f, 0.0f, 0.0f)});
+                glm::vec2 uvOffset = glm::vec2(0.3f, 0.2f);
+                int v4 = verts.add((MeshVert){outP0, (p0 + uvOffset) / uvScale, glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(1.0f, 0.0f, 0.0f), 1.0f});
+                int v5 = verts.add((MeshVert){outP1, (p1 + uvOffset) / uvScale, glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(1.0f, 0.0f, 0.0f), 1.0f});
+                int v6 = verts.add((MeshVert){inFP0, (innerP0 + uvOffset) / uvScale, glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(1.0f, 0.0f, 0.0f), 1.0f});
+                int v7 = verts.add((MeshVert){inFP1, (innerP1 + uvOffset) / uvScale, glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(1.0f, 0.0f, 0.0f), 1.0f});
                 tris.add(v4);
                 tris.add(v5);
                 tris.add(v6);
@@ -134,10 +138,10 @@ static void generateBlockMesh(Polygon<true>& poly, Mesh& mesh, int frontLayer, i
 
                 glm::vec3 bitang = glm::vec3(0.0f, 0.0f, -1.0f);
                 glm::vec3 norm = glm::cross(bitang, tang);
-                int v8 = verts.add((MeshVert){inFP0, glm::vec2(perim, 1.0f), norm, tang});
-                int v9 = verts.add((MeshVert){inFP1, glm::vec2(newPerim, 1.0f), norm, tang});
-                int v10 = verts.add((MeshVert){inBP0, glm::vec2(perim, 0.0f), norm, tang});
-                int v11 = verts.add((MeshVert){inBP1, glm::vec2(newPerim, 0.0f), norm, tang});
+                int v8 = verts.add((MeshVert){inFP0, glm::vec2(perim / uvScale, 1.0f), norm, tang, 1.0f});
+                int v9 = verts.add((MeshVert){inFP1, glm::vec2(newPerim / uvScale, 1.0f), norm, tang, 1.0f});
+                int v10 = verts.add((MeshVert){inBP0, glm::vec2(perim / uvScale, 0.0f), norm, tang, 1.0f});
+                int v11 = verts.add((MeshVert){inBP1, glm::vec2(newPerim / uvScale, 0.0f), norm, tang, 1.0f});
                 tris.add(v8);
                 tris.add(v9);
                 tris.add(v10);

@@ -9,6 +9,7 @@ struct MeshVert {
     glm::vec2 uv;
     glm::vec3 norm;
     glm::vec3 tang;
+    float texId;
 };
 
 class Mesh {

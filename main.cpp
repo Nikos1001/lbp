@@ -63,10 +63,10 @@ int main() {
 
         rnd.beginLighting();
 
-        rnd.setAmbient(glm::vec3(1.0f, 1.0f, 1.0f));
-        rnd.setDirectional(glm::vec3(1.0f, -1.0f, -1.0f), glm::vec3(0.6f, 0.6f, 0.6f));
+        // rnd.setDirectional(glm::vec3(1.0f, -1.0f, -1.0f), glm::vec3(4.0f, 4.0f, 4.0f));
         for(Player* curr = ObjList<Player>::first(); curr; curr = ObjList<Player>::next(curr)) { 
-            rnd.addPointLight(glm::vec3(0.0f, 1.0f, -1.0f), glm::vec3(10.0f));
+            b2Vec2 pos = curr->body->GetPosition();
+            rnd.addPointLight(glm::vec3(pos.x, pos.y + 0.5f, 1.0f), glm::vec3(100.0f));
         }
 
         rnd.endLighting();
@@ -74,10 +74,10 @@ int main() {
         for(Block* curr = ObjList<Block>::first(); curr; curr = ObjList<Block>::next(curr)) {
             curr->render();
         }
-        for(Bolt* curr = ObjList<Bolt>::first(); curr; curr = ObjList<Bolt>::next(curr)) {
+        for(Player* curr = ObjList<Player>::first(); curr; curr = ObjList<Player>::next(curr)) {
             curr->render();
         }
-        for(Player* curr = ObjList<Player>::first(); curr; curr = ObjList<Player>::next(curr)) {
+        for(Bolt* curr = ObjList<Bolt>::first(); curr; curr = ObjList<Bolt>::next(curr)) {
             curr->render();
         }
 

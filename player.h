@@ -35,12 +35,13 @@ public:
     void update(float dt);
     void applyForce(glm::vec2 force);
 
+    b2Body* body;
+    int layer;
 
 private:
 
     void kill();
 
-    b2Body* body;
     CapsuleFixtures solid;
     CapsuleFixtures crushSensor;
     CapsuleFixtures frontSensor;
@@ -51,8 +52,6 @@ private:
     
     ActionBuffer jumpBuffer;
     bool rising;
-
-    int layer;
 
     bool grabbing;
     b2Body* grabOther;
