@@ -8,8 +8,9 @@
 #include "material.h"
 #include "common/resManager.h"
 #include "assets.h"
+#include "imgui.h"
+#include "editor.h"
 
-Renderer rnd;
 b2World* phys;
 Audio audio;
 ObjList<Block> blocks;
@@ -20,7 +21,7 @@ int main() {
 
     arenaInit();
 
-    rnd.init();
+    Renderer::init();
 
     b2Vec2 gravity(0.0f, -10.0f);
     phys = new b2World(gravity); 
@@ -37,15 +38,20 @@ int main() {
     player->init(-2.0f, 1.0f, 1);
 
     loadAssets();
-    loadLevel("test");
+
+    Editor editor;
+    editor.init();
 
     double prevTime = glfwGetTime(); 
-    while(!glfwWindowShouldClose(rnd.window)) {
+    while(!glfwWindowShouldClose(Renderer::window)) {
 
         arenaClear();
         double currTime = glfwGetTime();
         double dt = currTime - prevTime;
         prevTime = currTime;
+
+        Renderer::camPos.z = 3.0f; 
+        Renderer::beginFrame();
 
         phys->Step(1.0f / 60.0f, 9, 3);
 
@@ -53,24 +59,10 @@ int main() {
             curr->update(dt);
         }
 
-        char buf[128];
-        sprintf(buf, "Frametime: %g", floor(dt * 1000));
-        glfwSetWindowTitle(rnd.window, buf);
+        Renderer::beginLighting();
+        Renderer::endLighting();
 
-
-        rnd.camPos.z = 3.0f; 
-        rnd.beginFrame();
-
-        rnd.beginLighting();
-
-        // rnd.setDirectional(glm::vec3(1.0f, -1.0f, -1.0f), glm::vec3(4.0f, 4.0f, 4.0f));
-        for(Player* curr = ObjList<Player>::first(); curr; curr = ObjList<Player>::next(curr)) { 
-            b2Vec2 pos = curr->body->GetPosition();
-            rnd.addPointLight(glm::vec3(pos.x, pos.y + 0.5f, 1.0f), glm::vec3(100.0f));
-        }
-
-        rnd.endLighting();
-
+        Renderer::beginScene();
         for(Block* curr = ObjList<Block>::first(); curr; curr = ObjList<Block>::next(curr)) {
             curr->render();
         }
@@ -80,9 +72,14 @@ int main() {
         for(Bolt* curr = ObjList<Bolt>::first(); curr; curr = ObjList<Bolt>::next(curr)) {
             curr->render();
         }
+        Renderer::endScene();
+
+        Renderer::beginUI();
+        editor.update(dt);
+        Renderer::endUI();
 
         updateInput();
-        rnd.endFrame();
+        Renderer::endFrame();
 
     }
 

@@ -21,7 +21,7 @@ void Bolt::render() {
     trans = glm::translate(trans, glm::vec3(jointPos.x, jointPos.y, -layer));
     trans = glm::rotate(trans, joint->GetJointAngle(), glm::vec3(0.0f, 0.0f, 1.0f));
     trans = glm::scale(trans, glm::vec3(0.3f));
-    rnd.renderMesh(*boltMesh.get(), *boltCol.get(), *boltNorm.get(), *boltArm.get(), trans, 1.0f, 1.0f, 0.0f); 
+    Renderer::renderMesh(*boltMesh.get(), *boltCol.get(), *boltNorm.get(), *boltArm.get(), trans, 1.0f, 1.0f, 0.0f); 
 }
 
 void Bolt::free() {

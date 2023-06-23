@@ -10,7 +10,6 @@
 #include "player.h"
 #include "bolt.h"
 
-extern Renderer rnd; 
 extern b2World* phys;
 extern Audio audio;
 

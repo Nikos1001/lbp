@@ -1,6 +1,8 @@
 
 #include "material.h"
 #include "util.h"
+#include "lib/json/single_include/nlohmann/json.hpp"
+using json = nlohmann::json;
 
 Arr<Material, true> materials;
 

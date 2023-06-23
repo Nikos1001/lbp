@@ -2,7 +2,7 @@
     "materials": [
         {
             "name": "factory-metal",
-            "density": 25,
+            "density": 100,
             "bevelType": "flat",
             "bevelWidth": 0.05,
             "faceInset": 0,
@@ -10,7 +10,7 @@
         },
         {
             "name": "rust",
-            "density": 25,
+            "density": 100,
             "bevelType": "square",
             "bevelWidth": 0.075,
             "faceInset": 0.1,

@@ -24,21 +24,21 @@ void Block::free() {
 }
 
 void Block::render() {
-    rnd.meshShader.use();
+    Renderer::meshShader.use();
     glm::mat4 transform = glm::mat4(1.0f); 
     transform = glm::translate(transform, glm::vec3(body->GetPosition().x, body->GetPosition().y, 0.0f));
     transform = glm::rotate(transform, body->GetAngle(), glm::vec3(0.0f, 0.0f, 1.0f));
     for(int i = 0; i < pieces.cnt(); i++) {
         int material = pieces[i].material;
         if(!pieces[i].isModelMat) {
-            rnd.renderMesh(pieces[i].mesh, 3, materials[material].col, materials[material].norm, materials[material].arm, transform, materials[material].uvScale, materials[material].normStrength, 0.0f);
+            Renderer::renderMesh(pieces[i].mesh, 3, materials[material].col, materials[material].norm, materials[material].arm, transform, materials[material].uvScale, materials[material].normStrength, 0.0f);
         } else {
             glm::mat4 trans = glm::mat4(1.0f);
             glm::vec2 localPos = pieces[i].pos;
             b2Vec2 worldPos = body->GetWorldPoint(b2Vec2(localPos.x, localPos.y));
             trans = glm::translate(trans, glm::vec3(worldPos.x, worldPos.y, -pieces[i].frontLayer - 1.0f));
             trans = glm::rotate(trans, body->GetAngle(), glm::vec3(0.0f, 0.0f, 1.0f));
-            rnd.renderMesh(modelMaterials[material].mesh, modelMaterials[material].col, modelMaterials[material].norm, modelMaterials[material].arm, trans, 1.0f, 0.0f, modelMaterials[material].emission);
+            Renderer::renderMesh(modelMaterials[material].mesh, modelMaterials[material].col, modelMaterials[material].norm, modelMaterials[material].arm, trans, 1.0f, 0.0f, modelMaterials[material].emission);
         }
     }
 }
@@ -209,7 +209,7 @@ void updatePiece(BlockPiece& piece, b2Body* body) {
 
         b2FixtureDef fixtureDef;
         fixtureDef.shape = &shape;
-        fixtureDef.density = materials[piece.material].density; 
+        fixtureDef.density = piece.isModelMat ? modelMaterials[piece.material].density : materials[piece.material].density; 
         fixtureDef.friction = 0.3f;
 
         uint32_t mask = 0;

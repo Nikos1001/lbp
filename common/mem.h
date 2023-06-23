@@ -43,6 +43,24 @@ public:
         size--;
     }
 
+    void clear() {
+        size = 0;
+    }
+
+    void removeAt(int i) {
+        memcpy((void*)(elems + i), (void*)(elems + i + 1), sizeof(T) * (size - i - 1));
+        size--;
+    }
+
+    void insertAt(int i, T elem) {
+        size++;
+        if(size > cap) {
+            grow();
+        }
+        memcpy((void*)(elems + i + 1), (void*)(elems + i), sizeof(T) * (size - i - 1));
+        this->elems[i] = elem;
+    }
+
     T& operator[](int idx) {
         return elems[idx];
     }

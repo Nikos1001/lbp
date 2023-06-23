@@ -38,6 +38,8 @@ public:
     b2Body* body;
     int layer;
 
+    bool enable;
+
 private:
 
     void kill();

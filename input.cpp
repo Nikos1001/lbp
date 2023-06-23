@@ -10,11 +10,23 @@ void updateInput() {
 }
 
 bool keyDown(int key) {
-    return glfwGetKey(rnd.window, key) == GLFW_PRESS; 
+    return glfwGetKey(Renderer::window, key) == GLFW_PRESS; 
 }
 
 bool keyPressed(int key) {
     return keyDown(key) && !prevKeyPressed[key]; 
+}
+
+glm::vec2 getMousePos() {
+    double x, y;
+    glfwGetCursorPos(Renderer::window, &x, &y);
+    int w, h;
+    glfwGetWindowSize(Renderer::window, &w, &h);
+    x /= w / 2;
+    y /= -h / 2;
+    x -= 1.0f;
+    y += 1.0f;
+    return glm::vec2(x, y);
 }
 
 

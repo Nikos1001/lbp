@@ -7,7 +7,10 @@ add_executable(lbp
     polygon/polygon.cpp polygon/geoutil.cpp
     audio/audio.cpp
     assets.cpp
-    level.cpp block.cpp bolt.cpp material.cpp player.cpp)
+    level.cpp editor.cpp block.cpp bolt.cpp material.cpp player.cpp
+    lib/imgui/imgui.cpp lib/imgui/imgui_widgets.cpp lib/imgui/imgui_draw.cpp lib/imgui/imgui_tables.cpp lib/imgui/backends/imgui_impl_glfw.cpp lib/imgui/backends/imgui_impl_opengl3.cpp lib/imgui/imgui_demo.cpp)
+
+target_include_directories(lbp PUBLIC lib/imgui)
 
 add_subdirectory(lib/glfw)
 target_link_libraries(lbp glfw)
@@ -28,5 +31,4 @@ if(LINUX)
     target_link_libraries(lbp pthread m dl)
 endif()
 
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -fsanitize=undefined -fsanitize=address")
-#target_link_options(lbp BEFORE PUBLIC -fsanitize=undefined PUBLIC -fsanitize=address)
+target_link_options(lbp PUBLIC -fsanitize=address)

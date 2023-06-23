@@ -1,75 +1,144 @@
 
 #include "level.h"
-#include "main.h"
-#include "util.h"
-#include "material.h"
+#include "block.h"
+#include "objList.h"
+#include "polygon/polygon.h"
 
-#include <fstream>
-
-void loadModelPiece(json& pieceData, Block* block) {
-    std::string modelName = (std::string)pieceData["model"];
-    const char* modelNameCStr = modelName.c_str();
-    int model = 0;
-    for(int i = 0; i < nModelMats; i++)
-        if(strcmp(modelMaterials[i].name, modelNameCStr) == 0)
-            model = i;
-    int pieceIdx = block->addPiece(true, (int)pieceData["layer"], (int)pieceData["layer"], model);
-    block->pieces[pieceIdx].pos = glm::vec2((float)pieceData["position"][0], (float)pieceData["position"][1]);
+LevelPieceVertex makePointVertex(glm::vec2 point) {
+    LevelPieceVertex res;
+    res.point = point;
+    return res;
 }
 
-void loadPolyPiece(json& pieceData, Block* block) {
-    std::string materialName = (std::string)pieceData["material"];
-    const char* materialNameCStr = materialName.c_str();
-    int material = 0;
-    for(int i = 0; i < materials.cnt(); i++)
-        if(strcmp(materials[i].name, materialNameCStr) == 0)
-            material = i;
-    int pieceIdx = block->addPiece(false, (int)pieceData["front"], (int)pieceData["back"], material);
-    for(json& chain : pieceData["chains"]) {
-        int start = block->pieces[pieceIdx].poly.addChain(glm::vec2((float)chain[0], (float)chain[1]));
-        int v = start;
-        for(int i = 2; i < chain.size(); i += 2) {
-            v = block->pieces[pieceIdx].poly.addPoint(glm::vec2((float)chain[i], (float)chain[i + 1]), v);
-        }
-        block->pieces[pieceIdx].poly.closeChain(start, v);
-    }
+void LevelPiece::init() {
+    vertices.init();
+    frontLayer = backLayer = 0;
+    material = 0;
+    tombstone = false;
 }
 
-void loadLevel(const char* name) {
+void LevelPiece::free() {
+    vertices.free();
+    tombstone = true;
+}
 
-    char path[512];
-    sprintf(path, "res/levels/%s.json", name);
-    std::ifstream file(path);
-    json level = json::parse(file); 
+void LevelBlock::init() {
+    pieceIdxs.init();
+    block = NULL;
+    tombstone = false;
+}
 
-    Arr<Block*, false> addedBlocks;
-    addedBlocks.init();
-    for(json& blockData : level["blocks"]) {
-        Block* block = ObjList<Block>::spawn();
-        block->init((bool)blockData["dynamic"]);
-        for(json& pieceData : blockData["pieces"]) {
-            if(pieceData.contains("model")) {
-                loadModelPiece(pieceData, block);
-            } else {
-                loadPolyPiece(pieceData, block);
-            }
-        }
-        addedBlocks.add(block);
-        block->updateMesh();
+void LevelBlock::free() {
+    pieceIdxs.free();
+    block = NULL;
+    tombstone = true;
+}
+
+static void computePiecePolygon(LevelPiece* piece, Polygon<true>* polygon) {
+    int start = polygon->addChain(piece->vertices[0].point); 
+    int v = start;
+    for(int i = 1; i < piece->vertices.cnt(); i++) {
+        v = polygon->addPoint(piece->vertices[i].point, v);
     }
+    polygon->closeChain(start, v);
+}
 
-    for(json& jointData : level["joints"]) {
-
-        if(jointData["type"] == "bolt") {
-            Block* a = addedBlocks[(int)jointData["a"]];
-            Block* b = addedBlocks[(int)jointData["b"]];
-            int aPieceIdx = (int)jointData["aPieceIdx"];
-            int bPieceIdx = (int)jointData["bPieceIdx"];
-            b2Vec2 pos = b2Vec2((float)jointData["position"][0], (float)jointData["position"][1]);
-            Bolt* bolt = ObjList<Bolt>::spawn();
-            bolt->init(a, aPieceIdx, b, bPieceIdx, pos);
-        }
-
+void LevelBlock::update(Level* level) {
+    if(block != NULL)
+        ObjList<Block>::kill(block);
+    block = ObjList<Block>::spawn();
+    block->init(false);
+    for(int i = 0; i < pieceIdxs.cnt(); i++) {
+        LevelPiece* piece = &level->pieces[pieceIdxs[i]];
+        int pieceIdx = block->addPiece(false, piece->frontLayer, piece->backLayer, 0);
+        block->pieces[pieceIdx].material = piece->material;
+        computePiecePolygon(piece, &block->pieces[pieceIdx].poly);
     }
+    block->updateMesh();
+}
 
+void Level::init() {
+    skyCol = glm::vec3(0.6f, 0.7, 1.0f);
+    dirCol = glm::vec3(4.0f);
+
+    pieces.init();
+    activePieces = 0;
+    blocks.init();
+    activeBlocks = 0;
+}
+
+void Level::free() {
+    for(int i = 0; i < pieces.cnt(); i++)
+        pieces[i].free();
+    pieces.free();
+    for(int i = 0; i < blocks.cnt(); i++)
+        blocks[i].free();
+    blocks.free();
+}
+
+int Level::addPiece(int block) {
+    int idx = -1;
+    for(int i = 0; i < pieces.cnt(); i++) {
+        if(pieces[i].tombstone) {
+            idx = i;
+            break;
+        }
+    }
+    if(idx == -1) {
+        LevelPiece piece;
+        pieces.add(piece);
+        idx = pieces.cnt() - 1;
+    }
+    pieces[idx].init();
+    pieces[idx].block = block;
+    pieces[idx].idxInBlock = blocks[block].pieceIdxs.cnt();
+    blocks[block].pieceIdxs.add(idx);
+    activePieces++;
+    return idx; 
+}
+
+void Level::deleteBlock(int blockIdx) {
+    LevelBlock* block = &blocks[blockIdx];
+    if(block->block != NULL) {
+        ObjList<Block>::kill(block->block);
+        block->block = NULL;
+    }
+    block->free();
+    activeBlocks--;
+}
+
+void Level::deletePiece(int pieceIdx) {
+    LevelPiece* piece = &pieces[pieceIdx];
+    LevelBlock* block = &blocks[piece->block];
+    if(block->pieceIdxs.cnt() == 1) {
+        deleteBlock(piece->block);
+    } else {
+        for(int i = 0; i < block->pieceIdxs.cnt(); i++) {
+            if(block->pieceIdxs[i] == pieceIdx) {
+                block->pieceIdxs[i] = block->pieceIdxs[block->pieceIdxs.cnt() - 1];
+                block->pieceIdxs.pop();
+                pieces[block->pieceIdxs[i]].idxInBlock = piece->idxInBlock;
+            } 
+        }
+    }
+    piece->free();
+    activePieces--;
+}
+
+int Level::addBlock() {
+    int idx = -1;
+    for(int i = 0; i < blocks.cnt(); i++) {
+        if(blocks[i].tombstone) {
+            idx = i;
+            break;
+        }
+    }
+    if(idx == -1) {
+        LevelBlock block;
+        blocks.add(block);
+        idx = blocks.cnt() - 1;
+    }
+    blocks[idx].init();
+    activeBlocks++;
+    return idx;
 }

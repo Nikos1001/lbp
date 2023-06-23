@@ -6,7 +6,11 @@
 #include "stb_image.h"
 #include "../material.h"
 
-static const char* meshShaderVertSrc = "#version 330 core\n" str(
+#include "imgui.h"
+#include "backends/imgui_impl_glfw.h"
+#include "backends/imgui_impl_opengl3.h"
+
+static const char* meshShaderVertSrc = "#version 330 core\n" R"(
 
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec2 aUv;
@@ -35,9 +39,9 @@ void main() {
     pTexId = aTexId;
 }
 
-);
+)";
 
-static const char* meshShaderFragSrc = "#version 330 core\n" "#define PI 3.14159\n" "#define NUM_LIGHTS 4\n" str(
+static const char* meshShaderFragSrc = "#version 330 core\n" "#define PI 3.14159\n" "#define NUM_LIGHTS 4\n" R"(
 
 in vec2 pUv;
 in vec3 pNorm;
@@ -119,9 +123,9 @@ void main() {
 
 } 
 
-);
+)";
 
-const char* screenShaderVertSrc = "#version 330 core\n" str(
+const char* screenShaderVertSrc = "#version 330 core\n" R"(
 
 layout (location = 0) in vec3 aPos;
 
@@ -132,9 +136,9 @@ void main() {
     pUv = aPos.xy + 0.5f;
 }
 
-); 
+)";
 
-const char* screenShaderFragSrc = "#version 330 core\n#define PI 3.14159\n" str(
+const char* screenShaderFragSrc = "#version 330 core\n#define PI 3.14159\n" R"(
 
 in vec2 pUv;
 
@@ -150,6 +154,7 @@ struct PointLight {
 
 uniform PointLight uPointLights[4];
 
+uniform vec3 uAmbient;
 uniform vec3 uDirectionalDir; 
 uniform vec3 uDirectionalCol;
 
@@ -171,6 +176,10 @@ float dot0(vec3 a, vec3 b) {
 
 vec3 fresnel(vec3 v, vec3 h, vec3 f0) {
     return f0 + (1.0f - f0) * pow(1.0f - dot0(v, h), 5.0f);
+}
+
+vec3 fresnelRoughness(float cosTheta, vec3 f0, float roughness) {
+    return f0 + (max(vec3(1.0 - roughness), f0) - f0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
 float distribution(float alpha, vec3 n, vec3 h) {
@@ -199,15 +208,11 @@ vec3 specular(float alpha, vec3 n, vec3 h, vec3 l, vec3 v, vec3 f) {
     return num / denom;
 }
 
-vec3 calcLighting(vec3 l, vec3 n, vec3 v, vec3 matCol, vec3 incomingLight, vec3 erm) {
+vec3 calcLighting(vec3 l, vec3 n, vec3 v, vec3 matCol, vec3 incomingLight, float roughness, vec3 f0) {
     vec3 h = normalize(l + v);
 
-    float roughness = erm.y; 
-    float metallic = erm.z; 
-    
     float alpha = sq(roughness);
 
-    vec3 f0 = mix(vec3(0.04f), matCol, metallic);
     vec3 f = fresnel(v, h, f0);
     vec3 kd = 1 - f; 
 
@@ -221,34 +226,113 @@ vec3 calcLighting(vec3 l, vec3 n, vec3 v, vec3 matCol, vec3 incomingLight, vec3 
     return light;
 }
 
+vec3 calcSkylight(vec3 skyCol, vec3 n, vec3 v, vec3 f0, float roughness, vec3 matCol) {
+    vec3 up = n.z < 0.99f ? vec3(0.0f, 0.0f, 1.0f) : vec3(1.0f, 0.0f, 0.0f);
+    vec3 right = cross(up, n);
+    up = cross(right, n);
+
+    vec3 light = vec3(0.0f);
+    const float sqrt2_2 = 0.70710678118;
+    light += calcLighting(n, n, v, matCol, skyCol, roughness, f0);
+    light += calcLighting(right * sqrt2_2 + n * sqrt2_2, n, v, matCol, skyCol, roughness, f0);
+    light += calcLighting(up * sqrt2_2 + n * sqrt2_2, n, v, matCol, skyCol, roughness, f0);
+    light += calcLighting(-right * sqrt2_2 + n * sqrt2_2, n, v, matCol, skyCol, roughness, f0);
+    light += calcLighting(-up + sqrt2_2 + n * sqrt2_2, n, v, matCol, skyCol, roughness, f0);
+    light /= 5.0f;
+
+    return light;
+}
 
 void main() {
 
-    vec3 matCol = texture(uCol, pUv).xyz; 
+    vec4 col = texture(uCol, pUv); 
+    vec3 matCol = col.xyz;
+    float alpha = col.w;
     vec3 norm = texture(uNorm, pUv).xyz; 
     vec3 pos = texture(uPos, pUv).xyz;
     vec3 erm = texture(uErm, pUv).xyz;
+    vec3 f0 = mix(vec3(0.04f), matCol, erm.z);
 
     vec3 view = normalize(uCamPos - pos);
+
+    vec3 skyCol = uAmbient;
     
     vec3 light = erm.x * matCol; 
-    light += calcLighting(-uDirectionalDir, norm, view, matCol, uDirectionalCol, erm);
+    light += calcSkylight(skyCol, norm, view, f0, erm.y, matCol);
+    light += calcLighting(-uDirectionalDir, norm, view, matCol, uDirectionalCol, erm.y, f0);
     for(int i = 0; i < 1; i++) {
         vec3 lightPos = uPointLights[i].pos;
         vec3 lightDir = normalize(lightPos - pos);
         vec3 halfView = normalize(lightDir + view);
         float dist = length(lightPos - pos);
         float power = 1 / (1 + dist + 2 * dist * dist);
-        light += calcLighting(lightDir, norm, view, matCol, uPointLights[i].col * power, erm);
+        light += calcLighting(lightDir, norm, view, matCol, uPointLights[i].col * power, erm.y, f0);
     }
 
     // High-tech HDR mapping
     light = light / (light + vec3(1.0f));
-
-    oColor = vec4(light, 1.0f); 
+    oColor = vec4(lerp(skyCol, light, alpha), 1.0f); 
 }
 
-);
+)";
+
+const char* uiShaderVertSrc = R"(
+
+#version 330 core
+
+layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec2 aUv;
+
+uniform mat4 uProjView;
+uniform mat4 uModel;
+
+out vec2 pUv;
+
+void main() {
+    gl_Position = uProjView * uModel * vec4(aPos, 1.0f); 
+    pUv = aUv;
+}
+
+)";
+
+const char* uiLineShaderFragSrc = R"(
+
+#version 330 core
+
+out vec4 oColor;
+
+uniform vec3 uColor;
+
+void main() {
+    oColor = vec4(uColor, 1.0f);
+}
+
+)";
+
+const char* uiCircleShaderFragSrc = R"(
+
+#version 330 core
+
+in vec2 pUv;
+
+out vec4 oColor;
+
+uniform vec3 uColor;
+uniform vec3 uInnerColor;
+uniform float uInnerRadiusRatio;
+
+void main() {
+    float dist = length(pUv - vec2(0.5f));
+    if(dist > 0.5f)
+        discard;
+    oColor = vec4(uColor, 1.0f);
+    if(dist < 0.5f * uInnerRadiusRatio)
+        oColor = vec4(uInnerColor, 1.0f);
+}
+
+)";
+
+const float fov = 90.0f;
 
 void Renderer::init() {
 
@@ -272,6 +356,13 @@ void Renderer::init() {
         exit(-1);
     }
 
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 330 core");
+
     meshShader.init(meshShaderVertSrc, meshShaderFragSrc);
     meshShader.use();
     meshShader.setIntUniform("uCol[0]", 0);
@@ -290,6 +381,9 @@ void Renderer::init() {
     screenShader.setIntUniform("uNorm", 1);
     screenShader.setIntUniform("uPos", 2);
     screenShader.setIntUniform("uErm", 3);
+
+    uiLineShader.init(uiShaderVertSrc, uiLineShaderFragSrc);
+    uiCircleShader.init(uiShaderVertSrc, uiCircleShaderFragSrc);
 
     quad.init();
 
@@ -315,31 +409,18 @@ void Renderer::init() {
 }
 
 void Renderer::beginFrame() {
-
-    int viewW, viewH;
-    glfwGetWindowSize(window, &viewW, &viewH);
-    float xScale, yScale;
-    glfwGetWindowContentScale(window, &xScale, &yScale);
-    viewW *= xScale;
-    viewH *= yScale;
-    gbuff.resize(viewW, viewH);
-
-    gbuff.renderTo();
-
-    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
     glm::mat4 view = glm::mat4(1.0f);
     view = glm::translate(view, -camPos);
 
     int w, h;
     glfwGetWindowSize(window, &w, &h);
-    glm::mat4 proj = glm::perspective(glm::radians(90.0f), (float)w / (float)h, 0.1f, 1000.0f);
+    glm::mat4 proj = glm::perspective(glm::radians(fov), (float)w / (float)h, 0.1f, 1000.0f);
 
     projView = proj * view;
 
-    meshShader.use();
-    meshShader.setMat4Uniform("uProjView", projView);
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
 
 }
 
@@ -354,18 +435,29 @@ void Renderer::beginLighting() {
 }
 
 void Renderer::endLighting() {
-    meshShader.use();
+
 }
 
-void Renderer::endFrame() {
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    // glBindFramebuffer(GL_READ_FRAMEBUFFER, gbuff.fbo);
-    // glBlitFramebuffer(// makes OpenGL copying the framebuffer data
-    // 0, 0, 800, 600,
-    // 0, 0, 800, 600,
-    // GL_COLOR_BUFFER_BIT,// you only care about the color data, not the depth data …
-    // GL_NEAREST);
+void Renderer::beginScene() {
+    glEnable(GL_DEPTH_TEST);
+    meshShader.use();
+    meshShader.setMat4Uniform("uProjView", projView);
+
+    int w, h;
+    glfwGetFramebufferSize(window, &w, &h);
+    gbuff.resize(w, h);
+    gbuff.renderTo();
+
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+
+}
+
+void Renderer::endScene() {
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glDisable(GL_DEPTH_TEST);
 
     screenShader.use();
     screenShader.setVec3Uniform("uCamPos", camPos);
@@ -374,6 +466,23 @@ void Renderer::endFrame() {
     gbuff.pos.use(2);
     gbuff.erm.use(3);
     quad.render();
+}
+
+void Renderer::beginUI() {
+    glDisable(GL_DEPTH_TEST);
+    uiLineShader.use();
+    uiLineShader.setMat4Uniform("uProjView", projView);
+    uiCircleShader.use();
+    uiCircleShader.setMat4Uniform("uProjView", projView);
+}
+
+void Renderer::endUI() {
+
+}
+
+void Renderer::endFrame() {
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
     glfwSwapBuffers(window);
     glfwPollEvents();
@@ -404,10 +513,12 @@ void Renderer::renderMesh(Mesh& mesh, Texture& col, Texture& norm, Texture& arm,
 }
     
 void Renderer::setAmbient(glm::vec3 ambient) {
-    meshShader.setVec3Uniform("uAmbient", ambient);
+    screenShader.use();
+    screenShader.setVec3Uniform("uAmbient", ambient);
 }
 
 void Renderer::setDirectional(glm::vec3 dir, glm::vec3 col) {
+    screenShader.use();
     screenShader.setVec3Uniform("uDirectionalDir", dir);
     screenShader.setVec3Uniform("uDirectionalCol", col);
 }
@@ -419,4 +530,39 @@ void Renderer::addPointLight(glm::vec3 pos, glm::vec3 col) {
     sprintf(buf, "uPointLights[%d].col", currLight);
     screenShader.setVec3Uniform(buf, col);
     currLight++;
+}
+
+void Renderer::drawUILine(glm::vec3 a, glm::vec3 b, float thickness, glm::vec3 color) {
+    glm::vec3 delta = b - a;
+    float angle = atan(delta.y / delta.x);
+    float len = glm::length(delta);
+
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, (a + b) * 0.5f);
+    model = glm::rotate(model, angle, glm::vec3(0.0f, 0.0f, 1.0f));
+    model = glm::scale(model, glm::vec3(len, thickness, 1.0f));
+    uiLineShader.use();
+    uiLineShader.setMat4Uniform("uModel", model);
+    uiCircleShader.setVec3Uniform("uColor", color); 
+    quad.render();
+}
+
+void Renderer::drawUICircle(glm::vec3 pt, float radius, glm::vec3 color, glm::vec3 innerColor, float innerRadiusRatio) {
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, pt);
+    model = glm::scale(model, glm::vec3(radius * 2.0f));
+    uiCircleShader.use(); 
+    uiCircleShader.setMat4Uniform("uModel", model); 
+    uiCircleShader.setVec3Uniform("uColor", color); 
+    uiCircleShader.setVec3Uniform("uInnerColor", innerColor); 
+    uiCircleShader.setFloatUniform("uInnerRadiusRatio", innerRadiusRatio); 
+    quad.render();
+}
+
+glm::vec3 Renderer::screenToWorld(glm::vec2 pt, float z) {
+    int ww, wh;
+    glfwGetWindowSize(window, &ww, &wh);
+    float h = -(z - camPos.z) / tanf(glm::radians(fov / 2.0f));
+    float w = h * (float)ww / (float)wh;
+    return glm::vec3(w * pt.x + camPos.x, h * pt.y + camPos.y, z);
 }

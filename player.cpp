@@ -82,6 +82,8 @@ void Player::init(float x, float y, int layer) {
     grabbing = false;
     grabOther = NULL;
     grabJoint = NULL;
+
+    enable = false;
 }
 
 void Player::free() {
@@ -90,15 +92,15 @@ void Player::free() {
 
 void Player::render() {
 
-    rnd.meshShader.use();
+    Renderer::meshShader.use();
 
     glm::mat4 transform = glm::mat4(1.0f); 
     transform = glm::translate(transform, glm::vec3(body->GetPosition().x, body->GetPosition().y, -layer - 0.5f));
     transform = glm::rotate(transform, body->GetAngle(), glm::vec3(0.0f, 0.0f, 1.0f));
     transform = glm::translate(transform, glm::vec3(0.0f, CAPSULE_HEIGHT / 2, 0.0f));
     transform = glm::scale(transform, glm::vec3(2 * CAPSULE_RADIUS, 2 * CAPSULE_RADIUS + CAPSULE_HEIGHT, 1.0f));
-    rnd.meshShader.setMat4Uniform("uModel", transform);
-    rnd.quad.render();
+    Renderer::meshShader.setMat4Uniform("uModel", transform);
+    Renderer::quad.render();
 
 }
 
@@ -164,6 +166,8 @@ GrabPoint Player::getGrabPoint() {
 
 void Player::update(float dt) {
 
+    body->SetType(enable ? b2_dynamicBody : b2_staticBody);
+
     // Check for groundedness and front/back sensors
     bool grounded = false;
     bool objInFront = false;
@@ -198,8 +202,8 @@ void Player::update(float dt) {
     }
 
     // Camera tracking
-    rnd.camPos.x = body->GetPosition().x;
-    rnd.camPos.y = body->GetPosition().y + 1;
+    Renderer::camPos.x = body->GetPosition().x;
+    Renderer::camPos.y = body->GetPosition().y + 1;
 
     // Rotation stabilization
     float angle = body->GetAngle();
@@ -252,29 +256,33 @@ void Player::update(float dt) {
     } else {
         gravity = PLAYER_FALL_GRAVITY;
     }
+    if(!enable)
+        gravity = 0.0f;
     body->SetGravityScale(gravity);
     body->SetGravityScale(gravity);
 
     // Layer switching
-    if(keyPressed('W') && !objBehind && layer != MAX_LAYER && !grabbing)
-        layer++;
-    if(keyPressed('S') && !objInFront && layer != 0 && !grabbing)
-        layer--;
+    if(enable) {
+        if(keyPressed('W') && !objBehind && layer != MAX_LAYER && !grabbing)
+            layer++;
+        if(keyPressed('S') && !objInFront && layer != 0 && !grabbing)
+            layer--;
 
 
-    solid.setLayer(layer); 
-    crushSensor.setLayer(layer);
-    frontSensor.setLayer(layer - 1); 
-    backSensor.setLayer(layer + 1); 
+        solid.setLayer(layer); 
+        crushSensor.setLayer(layer);
+        frontSensor.setLayer(layer - 1); 
+        backSensor.setLayer(layer + 1); 
 
-    uint32_t grabSensorFilterMask = 1 << layer;
-    b2Filter grabSensorFilter;
-    grabSensorFilter.categoryBits = grabSensorFilterMask;
-    grabSensorFilter.maskBits = grabSensorFilterMask;
-    grabSensor->SetFilterData(grabSensorFilter);
+        uint32_t grabSensorFilterMask = 1 << layer;
+        b2Filter grabSensorFilter;
+        grabSensorFilter.categoryBits = grabSensorFilterMask;
+        grabSensorFilter.maskBits = grabSensorFilterMask;
+        grabSensor->SetFilterData(grabSensorFilter);
+    }
 
     // Grabbing
-    bool shouldGrab = keyDown('O');
+    bool shouldGrab = keyDown('O') && enable;
     if(grabbing) {
         if(!shouldGrab) {
             grabbing = false;
@@ -303,6 +311,8 @@ void Player::update(float dt) {
 }
 
 void Player::applyForce(glm::vec2 force) {
+    if(!enable)
+        return;
     body->ApplyForceToCenter(b2Vec2(force.x, force.y), true);
 }
 
